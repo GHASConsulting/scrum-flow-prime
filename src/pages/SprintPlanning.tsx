@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getSprints, saveSprints, getBacklog, getSprintTarefas, addSprintTarefa, initializeData } from '@/lib/storage';
+import { getSprints, saveSprints, getBacklog, getSprintTarefas, addSprintTarefa, addBacklogItem, initializeData } from '@/lib/storage';
 import { Sprint, BacklogItem, SprintTarefa } from '@/types/scrum';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -24,6 +24,21 @@ const SprintPlanning = () => {
   const [sprintTarefas, setSprintTarefas] = useState<SprintTarefa[]>([]);
   const [defaultResponsavel, setDefaultResponsavel] = useState('');
   const [isEditingSprint, setIsEditingSprint] = useState(false);
+  const [isCreatingTask, setIsCreatingTask] = useState(false);
+  
+  const [newTask, setNewTask] = useState<{
+    titulo: string;
+    descricao: string;
+    story_points: number;
+    prioridade: 'baixa' | 'media' | 'alta';
+    responsavel: string;
+  }>({
+    titulo: '',
+    descricao: '',
+    story_points: 1,
+    prioridade: 'media',
+    responsavel: ''
+  });
   
   const [newSprint, setNewSprint] = useState({
     nome: '',
@@ -128,6 +143,72 @@ const SprintPlanning = () => {
     setIsEditingSprint(false);
     setEditSprint({ data_inicio: undefined, data_fim: undefined });
     toast.success('Datas da sprint atualizadas com sucesso');
+  };
+
+  const handleCreateTask = () => {
+    if (!selectedSprint) {
+      toast.error('Selecione uma sprint primeiro');
+      return;
+    }
+
+    if (!newTask.titulo.trim()) {
+      toast.error('O título é obrigatório');
+      return;
+    }
+
+    if (newTask.titulo.trim().length > 200) {
+      toast.error('O título deve ter no máximo 200 caracteres');
+      return;
+    }
+
+    if (newTask.descricao && newTask.descricao.trim().length > 1000) {
+      toast.error('A descrição deve ter no máximo 1000 caracteres');
+      return;
+    }
+
+    if (newTask.story_points < 1 || newTask.story_points > 100) {
+      toast.error('Story points deve estar entre 1 e 100');
+      return;
+    }
+
+    if (newTask.responsavel && newTask.responsavel.trim().length > 100) {
+      toast.error('O nome do responsável deve ter no máximo 100 caracteres');
+      return;
+    }
+
+    const backlogItem: BacklogItem = {
+      id: `backlog-${Date.now()}`,
+      titulo: newTask.titulo.trim(),
+      descricao: newTask.descricao.trim() || undefined,
+      story_points: newTask.story_points,
+      prioridade: newTask.prioridade,
+      responsavel: newTask.responsavel.trim() || undefined,
+      status: 'todo'
+    };
+
+    addBacklogItem(backlogItem);
+    setBacklog([...backlog, backlogItem]);
+
+    const sprintTarefa: SprintTarefa = {
+      id: `st-${Date.now()}`,
+      sprint_id: selectedSprint,
+      backlog_id: backlogItem.id,
+      responsavel: backlogItem.responsavel || '',
+      status: 'todo'
+    };
+
+    addSprintTarefa(sprintTarefa);
+    setSprintTarefas([...sprintTarefas, sprintTarefa]);
+
+    setNewTask({
+      titulo: '',
+      descricao: '',
+      story_points: 1,
+      prioridade: 'media',
+      responsavel: ''
+    });
+    setIsCreatingTask(false);
+    toast.success('Tarefa criada e adicionada à sprint');
   };
 
   const handleAddToSprint = (backlogId: string) => {
@@ -454,40 +535,135 @@ const SprintPlanning = () => {
           </Card>
         </div>
 
-        {selectedSprint && availableBacklog.length > 0 && (
+        {selectedSprint && (
           <Card>
-            <CardHeader>
+            <CardHeader className="flex flex-row items-center justify-between">
               <CardTitle>Backlog Disponível ({availableBacklog.length})</CardTitle>
+              <Button onClick={() => setIsCreatingTask(true)} size="sm">
+                <Plus className="h-4 w-4 mr-2" />
+                Nova Tarefa
+              </Button>
             </CardHeader>
             <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                {availableBacklog.map(item => (
-                  <div key={item.id} className="p-4 border rounded-lg space-y-3">
+              {isCreatingTask && (
+                <div className="mb-6 p-4 border rounded-lg space-y-4 bg-muted/50">
+                  <h3 className="font-semibold">Criar Nova Tarefa</h3>
+                  
+                  <div>
+                    <label className="text-sm font-medium">Título *</label>
+                    <Input
+                      placeholder="Título da tarefa"
+                      value={newTask.titulo}
+                      onChange={(e) => setNewTask({ ...newTask, titulo: e.target.value })}
+                      maxLength={200}
+                    />
+                  </div>
+
+                  <div>
+                    <label className="text-sm font-medium">Descrição</label>
+                    <Input
+                      placeholder="Descrição da tarefa"
+                      value={newTask.descricao}
+                      onChange={(e) => setNewTask({ ...newTask, descricao: e.target.value })}
+                      maxLength={1000}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <h4 className="font-semibold text-sm">{item.titulo}</h4>
-                      <p className="text-xs text-muted-foreground mt-1">{item.descricao}</p>
-                    </div>
-                    
-                    <div className="flex gap-2">
-                      <Badge variant="outline" className="text-xs">SP: {item.story_points}</Badge>
-                      <Badge variant="outline" className="text-xs">{statusLabels[item.status]}</Badge>
+                      <label className="text-sm font-medium">Story Points *</label>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="100"
+                        value={newTask.story_points}
+                        onChange={(e) => setNewTask({ ...newTask, story_points: parseInt(e.target.value) || 1 })}
+                      />
                     </div>
 
-                    <p className="text-xs text-muted-foreground">
-                      Responsável: {item.responsavel}
-                    </p>
+                    <div>
+                      <label className="text-sm font-medium">Prioridade *</label>
+                      <Select value={newTask.prioridade} onValueChange={(value: 'baixa' | 'media' | 'alta') => setNewTask({ ...newTask, prioridade: value })}>
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="baixa">Baixa</SelectItem>
+                          <SelectItem value="media">Média</SelectItem>
+                          <SelectItem value="alta">Alta</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
 
+                  <div>
+                    <label className="text-sm font-medium">Responsável</label>
+                    <Input
+                      placeholder="Nome do responsável"
+                      value={newTask.responsavel}
+                      onChange={(e) => setNewTask({ ...newTask, responsavel: e.target.value })}
+                      maxLength={100}
+                    />
+                  </div>
+
+                  <div className="flex gap-2">
+                    <Button onClick={handleCreateTask} className="flex-1">
+                      Criar e Adicionar à Sprint
+                    </Button>
                     <Button 
-                      onClick={() => handleAddToSprint(item.id)} 
-                      size="sm" 
-                      className="w-full"
+                      onClick={() => {
+                        setIsCreatingTask(false);
+                        setNewTask({
+                          titulo: '',
+                          descricao: '',
+                          story_points: 1,
+                          prioridade: 'media',
+                          responsavel: ''
+                        });
+                      }} 
+                      variant="outline" 
+                      className="flex-1"
                     >
-                      <Plus className="h-3 w-3 mr-1" />
-                      Adicionar à Sprint
+                      Cancelar
                     </Button>
                   </div>
-                ))}
-              </div>
+                </div>
+              )}
+
+              {availableBacklog.length > 0 ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {availableBacklog.map(item => (
+                    <div key={item.id} className="p-4 border rounded-lg space-y-3">
+                      <div>
+                        <h4 className="font-semibold text-sm">{item.titulo}</h4>
+                        <p className="text-xs text-muted-foreground mt-1">{item.descricao}</p>
+                      </div>
+                      
+                      <div className="flex gap-2">
+                        <Badge variant="outline" className="text-xs">SP: {item.story_points}</Badge>
+                        <Badge variant="outline" className="text-xs">{statusLabels[item.status]}</Badge>
+                      </div>
+
+                      <p className="text-xs text-muted-foreground">
+                        Responsável: {item.responsavel}
+                      </p>
+
+                      <Button 
+                        onClick={() => handleAddToSprint(item.id)} 
+                        size="sm" 
+                        className="w-full"
+                      >
+                        <Plus className="h-3 w-3 mr-1" />
+                        Adicionar à Sprint
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              ) : !isCreatingTask && (
+                <p className="text-sm text-muted-foreground text-center py-8">
+                  Nenhuma tarefa disponível no backlog. Crie uma nova tarefa acima.
+                </p>
+              )}
             </CardContent>
           </Card>
         )}
