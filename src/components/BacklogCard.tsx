@@ -72,26 +72,6 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
       return;
     }
 
-    // Validar se a data fim está dentro do período da sprint
-    const dataFimSubtarefa = new Date(newSubtarefa.fim);
-    dataFimSubtarefa.setHours(0, 0, 0, 0);
-    
-    const dataInicioSprint = new Date(sprint.data_inicio);
-    dataInicioSprint.setHours(0, 0, 0, 0);
-    
-    const dataFimSprint = new Date(sprint.data_fim);
-    dataFimSprint.setHours(23, 59, 59, 999);
-
-    if (dataFimSubtarefa < dataInicioSprint) {
-      toast.error(`A data de conclusão deve ser após o início da sprint (${format(dataInicioSprint, 'dd/MM/yyyy', { locale: ptBR })})`);
-      return;
-    }
-
-    if (dataFimSubtarefa > dataFimSprint) {
-      toast.error(`A data de conclusão deve ser antes do fim da sprint (${format(dataFimSprint, 'dd/MM/yyyy', { locale: ptBR })})`);
-      return;
-    }
-
     try {
       const hoje = new Date();
       const dataFim = new Date(newSubtarefa.fim);
