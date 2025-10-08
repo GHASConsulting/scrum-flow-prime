@@ -54,21 +54,30 @@ export default function Administracao() {
   }, [user, userRole]);
 
   const fetchUsers = async () => {
-    const { data, error } = await supabase
+    const { data: profilesData, error: profilesError } = await supabase
       .from("profiles")
-      .select(`
-        id,
-        nome,
-        user_id,
-        user_roles(role)
-      `);
+      .select("*");
 
-    if (error) {
+    if (profilesError) {
       toast.error("Erro ao carregar usuários");
       return;
     }
 
-    setUsers(data || []);
+    const { data: rolesData, error: rolesError } = await supabase
+      .from("user_roles")
+      .select("*");
+
+    if (rolesError) {
+      toast.error("Erro ao carregar roles");
+      return;
+    }
+
+    const usersWithRoles = (profilesData || []).map((profile) => ({
+      ...profile,
+      user_roles: rolesData?.filter((role) => role.user_id === profile.user_id) || [],
+    }));
+
+    setUsers(usersWithRoles);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
