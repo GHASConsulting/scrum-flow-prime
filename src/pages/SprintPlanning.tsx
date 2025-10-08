@@ -133,7 +133,7 @@ const SprintPlanning = () => {
       const tarefasNaoValidadas = sprintTarefas
         .filter(st => st.sprint_id === sprintId && st.status !== 'validated')
         .map(st => backlog.find(b => b.id === st.backlog_id))
-        .filter(b => b !== undefined);
+        .filter(b => b !== undefined && b.status !== 'validated');
 
       // Encerrar a sprint
       await updateSprint(sprintId, { status: 'concluido' });
