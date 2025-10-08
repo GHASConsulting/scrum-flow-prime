@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,8 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getSprints, saveSprints, getBacklog, getSprintTarefas, addSprintTarefa, addBacklogItem, initializeData } from '@/lib/storage';
-import { Sprint, BacklogItem, SprintTarefa } from '@/types/scrum';
+import { useBacklog } from '@/hooks/useBacklog';
+import { useSprints } from '@/hooks/useSprints';
+import { useSprintTarefas } from '@/hooks/useSprintTarefas';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Plus, Check } from 'lucide-react';
@@ -17,11 +18,12 @@ import { toast } from 'sonner';
 import { statusLabels } from '@/lib/formatters';
 
 const SprintPlanning = () => {
-  const [sprints, setSprints] = useState<Sprint[]>([]);
+  const { backlog, addBacklogItem } = useBacklog();
+  const { sprints, addSprint, updateSprint } = useSprints();
+  const { sprintTarefas, addSprintTarefa: addTarefaToSprint } = useSprintTarefas();
+  
   const [selectedSprint, setSelectedSprint] = useState<string>('');
   const [isCreatingSprint, setIsCreatingSprint] = useState(false);
-  const [backlog, setBacklog] = useState<BacklogItem[]>([]);
-  const [sprintTarefas, setSprintTarefas] = useState<SprintTarefa[]>([]);
   const [defaultResponsavel, setDefaultResponsavel] = useState('');
   const [isEditingSprint, setIsEditingSprint] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
@@ -51,25 +53,7 @@ const SprintPlanning = () => {
     data_fim: undefined as Date | undefined
   });
 
-  useEffect(() => {
-    initializeData();
-    loadData();
-  }, []);
-
-  const loadData = () => {
-    const loadedSprints = getSprints();
-    setSprints(loadedSprints);
-    
-    const activeSprint = loadedSprints.find(s => s.status === 'ativo');
-    if (activeSprint) {
-      setSelectedSprint(activeSprint.id);
-    }
-    
-    setBacklog(getBacklog());
-    setSprintTarefas(getSprintTarefas());
-  };
-
-  const handleCreateSprint = () => {
+  const handleCreateSprint = async () => {
     if (!newSprint.nome || !newSprint.data_inicio || !newSprint.data_fim) {
       toast.error('Preencha todos os campos da sprint');
       return;
@@ -80,44 +64,48 @@ const SprintPlanning = () => {
       return;
     }
 
-    const sprint: Sprint = {
-      id: `sprint-${Date.now()}`,
-      nome: newSprint.nome,
-      data_inicio: format(newSprint.data_inicio, 'yyyy-MM-dd'),
-      data_fim: format(newSprint.data_fim, 'yyyy-MM-dd'),
-      status: 'planejamento'
-    };
+    try {
+      const sprint = await addSprint({
+        nome: newSprint.nome,
+        data_inicio: format(newSprint.data_inicio, 'yyyy-MM-dd'),
+        data_fim: format(newSprint.data_fim, 'yyyy-MM-dd'),
+        status: 'planejamento'
+      });
 
-    const allSprints = [...sprints, sprint];
-    saveSprints(allSprints);
-    setSprints(allSprints);
-    setSelectedSprint(sprint.id);
-    setIsCreatingSprint(false);
-    setNewSprint({ nome: '', data_inicio: undefined, data_fim: undefined });
-    toast.success('Sprint criada com sucesso');
+      setSelectedSprint(sprint.id);
+      setIsCreatingSprint(false);
+      setNewSprint({ nome: '', data_inicio: undefined, data_fim: undefined });
+    } catch (error) {
+      // Error já tratado no hook
+    }
   };
 
-  const handleActivateSprint = (sprintId: string) => {
-    const updated = sprints.map(s => ({
-      ...s,
-      status: s.id === sprintId ? 'ativo' as const : s.status === 'ativo' ? 'planejamento' as const : s.status
-    }));
-    saveSprints(updated);
-    setSprints(updated);
-    toast.success('Sprint ativada');
+  const handleActivateSprint = async (sprintId: string) => {
+    try {
+      // Desativar todas as outras sprints
+      const otherActiveSprint = sprints.find(s => s.status === 'ativo' && s.id !== sprintId);
+      if (otherActiveSprint) {
+        await updateSprint(otherActiveSprint.id, { status: 'planejamento' });
+      }
+      
+      // Ativar a sprint selecionada
+      await updateSprint(sprintId, { status: 'ativo' });
+      toast.success('Sprint ativada');
+    } catch (error) {
+      // Error já tratado no hook
+    }
   };
 
-  const handleFinishSprint = (sprintId: string) => {
-    const updated = sprints.map(s => ({
-      ...s,
-      status: s.id === sprintId ? 'concluido' as const : s.status
-    }));
-    saveSprints(updated);
-    setSprints(updated);
-    toast.success('Sprint encerrada com sucesso');
+  const handleFinishSprint = async (sprintId: string) => {
+    try {
+      await updateSprint(sprintId, { status: 'concluido' });
+      toast.success('Sprint encerrada com sucesso');
+    } catch (error) {
+      // Error já tratado no hook
+    }
   };
 
-  const handleUpdateSprintDates = () => {
+  const handleUpdateSprintDates = async () => {
     if (!selectedSprintData || !editSprint.data_inicio || !editSprint.data_fim) {
       toast.error('Preencha ambas as datas');
       return;
@@ -128,24 +116,21 @@ const SprintPlanning = () => {
       return;
     }
 
-    const updated = sprints.map(s => 
-      s.id === selectedSprintData.id 
-        ? {
-            ...s,
-            data_inicio: format(editSprint.data_inicio, 'yyyy-MM-dd'),
-            data_fim: format(editSprint.data_fim, 'yyyy-MM-dd')
-          }
-        : s
-    );
-    
-    saveSprints(updated);
-    setSprints(updated);
-    setIsEditingSprint(false);
-    setEditSprint({ data_inicio: undefined, data_fim: undefined });
-    toast.success('Datas da sprint atualizadas com sucesso');
+    try {
+      await updateSprint(selectedSprintData.id, {
+        data_inicio: format(editSprint.data_inicio, 'yyyy-MM-dd'),
+        data_fim: format(editSprint.data_fim, 'yyyy-MM-dd')
+      });
+
+      setIsEditingSprint(false);
+      setEditSprint({ data_inicio: undefined, data_fim: undefined });
+      toast.success('Datas da sprint atualizadas com sucesso');
+    } catch (error) {
+      // Error já tratado no hook
+    }
   };
 
-  const handleCreateTask = () => {
+  const handleCreateTask = async () => {
     if (!selectedSprint) {
       toast.error('Selecione uma sprint primeiro');
       return;
@@ -176,42 +161,38 @@ const SprintPlanning = () => {
       return;
     }
 
-    const backlogItem: BacklogItem = {
-      id: `backlog-${Date.now()}`,
-      titulo: newTask.titulo.trim(),
-      descricao: newTask.descricao.trim() || undefined,
-      story_points: newTask.story_points,
-      prioridade: newTask.prioridade,
-      responsavel: newTask.responsavel.trim() || undefined,
-      status: 'todo'
-    };
+    try {
+      const backlogItem = await addBacklogItem({
+        titulo: newTask.titulo.trim(),
+        descricao: newTask.descricao.trim() || null,
+        story_points: newTask.story_points,
+        prioridade: newTask.prioridade,
+        responsavel: newTask.responsavel.trim() || null,
+        status: 'todo'
+      });
 
-    addBacklogItem(backlogItem);
-    setBacklog([...backlog, backlogItem]);
+      await addTarefaToSprint({
+        sprint_id: selectedSprint,
+        backlog_id: backlogItem.id,
+        responsavel: backlogItem.responsavel || null,
+        status: 'todo'
+      });
 
-    const sprintTarefa: SprintTarefa = {
-      id: `st-${Date.now()}`,
-      sprint_id: selectedSprint,
-      backlog_id: backlogItem.id,
-      responsavel: backlogItem.responsavel || '',
-      status: 'todo'
-    };
-
-    addSprintTarefa(sprintTarefa);
-    setSprintTarefas([...sprintTarefas, sprintTarefa]);
-
-    setNewTask({
-      titulo: '',
-      descricao: '',
-      story_points: 1,
-      prioridade: 'media',
-      responsavel: ''
-    });
-    setIsCreatingTask(false);
-    toast.success('Tarefa criada e adicionada à sprint');
+      setNewTask({
+        titulo: '',
+        descricao: '',
+        story_points: 1,
+        prioridade: 'media',
+        responsavel: ''
+      });
+      setIsCreatingTask(false);
+      toast.success('Tarefa criada e adicionada à sprint');
+    } catch (error) {
+      // Error já tratado nos hooks
+    }
   };
 
-  const handleAddToSprint = (backlogId: string) => {
+  const handleAddToSprint = async (backlogId: string) => {
     if (!selectedSprint) {
       toast.error('Selecione uma sprint primeiro');
       return;
@@ -227,19 +208,19 @@ const SprintPlanning = () => {
     }
 
     const backlogItem = backlog.find(b => b.id === backlogId);
-    const responsavel = defaultResponsavel || backlogItem?.responsavel || '';
+    const responsavel = defaultResponsavel || backlogItem?.responsavel || null;
 
-    const sprintTarefa: SprintTarefa = {
-      id: `st-${Date.now()}`,
-      sprint_id: selectedSprint,
-      backlog_id: backlogId,
-      responsavel,
-      status: 'todo'
-    };
-
-    addSprintTarefa(sprintTarefa);
-    setSprintTarefas([...sprintTarefas, sprintTarefa]);
-    toast.success('Tarefa adicionada à sprint');
+    try {
+      await addTarefaToSprint({
+        sprint_id: selectedSprint,
+        backlog_id: backlogId,
+        responsavel,
+        status: 'todo'
+      });
+      toast.success('Tarefa adicionada à sprint');
+    } catch (error) {
+      // Error já tratado no hook
+    }
   };
 
   const getAvailableBacklog = () => {
