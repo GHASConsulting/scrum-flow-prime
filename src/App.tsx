@@ -9,6 +9,7 @@ import SprintPlanning from "./pages/SprintPlanning";
 import Daily from "./pages/Daily";
 import Review from "./pages/Review";
 import Retrospectiva from "./pages/Retrospectiva";
+import Auth from "./pages/Auth";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -19,6 +20,7 @@ const App = () => (
     <Sonner />
     <BrowserRouter>
       <Routes>
+        <Route path="/auth" element={<Auth />} />
         <Route path="/" element={<Dashboard />} />
         <Route path="/backlog" element={<Backlog />} />
         <Route path="/sprint-planning" element={<SprintPlanning />} />
