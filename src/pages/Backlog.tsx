@@ -1,18 +1,36 @@
 import { Layout } from '@/components/Layout';
 import { useBacklog } from '@/hooks/useBacklog';
 import { useSprintTarefas } from '@/hooks/useSprintTarefas';
+import { useSprints } from '@/hooks/useSprints';
 import { Status, BacklogItem } from '@/types/scrum';
 import { statusLabels } from '@/lib/formatters';
 import { BacklogCard } from '@/components/BacklogCard';
 import { toast } from 'sonner';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { useState, useEffect } from 'react';
 
 const Backlog = () => {
   const { backlog, updateBacklogItem } = useBacklog();
   const { sprintTarefas } = useSprintTarefas();
+  const { sprints } = useSprints();
+  const [selectedSprintId, setSelectedSprintId] = useState<string>('');
 
-  // Filtrar apenas tarefas que estão em sprints e converter para o tipo correto
+  // Sprints disponíveis para filtro (planejamento ou concluído)
+  const availableSprints = sprints.filter(s => s.status === 'planejamento' || s.status === 'concluido');
+  
+  // Sprint ativo
+  const activeSprint = sprints.find(s => s.status === 'ativo');
+
+  // Definir sprint ativo como padrão ao carregar
+  useEffect(() => {
+    if (activeSprint && !selectedSprintId) {
+      setSelectedSprintId(activeSprint.id);
+    }
+  }, [activeSprint, selectedSprintId]);
+
+  // Filtrar tarefas do sprint selecionado
   const tarefasNasSprints: BacklogItem[] = backlog
-    .filter(item => sprintTarefas.some(st => st.backlog_id === item.id))
+    .filter(item => sprintTarefas.some(st => st.backlog_id === item.id && st.sprint_id === selectedSprintId))
     .map(item => ({
       id: item.id,
       titulo: item.titulo,
@@ -41,6 +59,25 @@ const Backlog = () => {
           <div>
             <h2 className="text-3xl font-bold text-foreground">Backlog</h2>
             <p className="text-muted-foreground mt-1">Tarefas das sprints organizadas por status</p>
+          </div>
+          <div className="w-64">
+            <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione uma sprint" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeSprint && (
+                  <SelectItem value={activeSprint.id}>
+                    {activeSprint.nome} (Ativo)
+                  </SelectItem>
+                )}
+                {availableSprints.map(sprint => (
+                  <SelectItem key={sprint.id} value={sprint.id}>
+                    {sprint.nome} ({sprint.status === 'planejamento' ? 'Planejamento' : 'Encerrado'})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </div>
 
