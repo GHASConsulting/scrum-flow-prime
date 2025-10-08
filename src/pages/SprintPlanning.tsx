@@ -23,9 +23,15 @@ const SprintPlanning = () => {
   const [backlog, setBacklog] = useState<BacklogItem[]>([]);
   const [sprintTarefas, setSprintTarefas] = useState<SprintTarefa[]>([]);
   const [defaultResponsavel, setDefaultResponsavel] = useState('');
+  const [isEditingSprint, setIsEditingSprint] = useState(false);
   
   const [newSprint, setNewSprint] = useState({
     nome: '',
+    data_inicio: undefined as Date | undefined,
+    data_fim: undefined as Date | undefined
+  });
+
+  const [editSprint, setEditSprint] = useState({
     data_inicio: undefined as Date | undefined,
     data_fim: undefined as Date | undefined
   });
@@ -84,6 +90,44 @@ const SprintPlanning = () => {
     saveSprints(updated);
     setSprints(updated);
     toast.success('Sprint ativada');
+  };
+
+  const handleFinishSprint = (sprintId: string) => {
+    const updated = sprints.map(s => ({
+      ...s,
+      status: s.id === sprintId ? 'concluido' as const : s.status
+    }));
+    saveSprints(updated);
+    setSprints(updated);
+    toast.success('Sprint encerrada com sucesso');
+  };
+
+  const handleUpdateSprintDates = () => {
+    if (!selectedSprintData || !editSprint.data_inicio || !editSprint.data_fim) {
+      toast.error('Preencha ambas as datas');
+      return;
+    }
+
+    if (editSprint.data_fim < editSprint.data_inicio) {
+      toast.error('Data de fim deve ser posterior à data de início');
+      return;
+    }
+
+    const updated = sprints.map(s => 
+      s.id === selectedSprintData.id 
+        ? {
+            ...s,
+            data_inicio: format(editSprint.data_inicio, 'yyyy-MM-dd'),
+            data_fim: format(editSprint.data_fim, 'yyyy-MM-dd')
+          }
+        : s
+    );
+    
+    saveSprints(updated);
+    setSprints(updated);
+    setIsEditingSprint(false);
+    setEditSprint({ data_inicio: undefined, data_fim: undefined });
+    toast.success('Datas da sprint atualizadas com sucesso');
   };
 
   const handleAddToSprint = (backlogId: string) => {
@@ -174,24 +218,121 @@ const SprintPlanning = () => {
                   </div>
 
                   {selectedSprintData && (
-                    <div className="p-4 bg-muted rounded-lg space-y-2">
+                    <div className="p-4 bg-muted rounded-lg space-y-3">
                       <div className="flex items-center justify-between">
                         <h4 className="font-semibold">{selectedSprintData.nome}</h4>
                         <Badge variant={selectedSprintData.status === 'ativo' ? 'default' : 'secondary'}>
                           {selectedSprintData.status === 'ativo' ? 'Ativa' : selectedSprintData.status === 'concluido' ? 'Concluída' : 'Planejamento'}
                         </Badge>
                       </div>
-                      <p className="text-sm text-muted-foreground">
-                        {format(new Date(selectedSprintData.data_inicio), 'dd/MM/yyyy', { locale: ptBR })} - {format(new Date(selectedSprintData.data_fim), 'dd/MM/yyyy', { locale: ptBR })}
-                      </p>
-                      {selectedSprintData.status !== 'ativo' && (
-                        <Button 
-                          onClick={() => handleActivateSprint(selectedSprintData.id)}
-                          size="sm"
-                          className="w-full mt-2"
-                        >
-                          Ativar Sprint
-                        </Button>
+
+                      {!isEditingSprint ? (
+                        <>
+                          <p className="text-sm text-muted-foreground">
+                            {format(new Date(selectedSprintData.data_inicio), 'dd/MM/yyyy', { locale: ptBR })} - {format(new Date(selectedSprintData.data_fim), 'dd/MM/yyyy', { locale: ptBR })}
+                          </p>
+                          
+                          <div className="space-y-2">
+                            {selectedSprintData.status !== 'ativo' && (
+                              <Button 
+                                onClick={() => handleActivateSprint(selectedSprintData.id)}
+                                size="sm"
+                                className="w-full"
+                              >
+                                Ativar Sprint
+                              </Button>
+                            )}
+                            
+                            {selectedSprintData.status === 'ativo' && (
+                              <Button 
+                                onClick={() => handleFinishSprint(selectedSprintData.id)}
+                                size="sm"
+                                variant="destructive"
+                                className="w-full"
+                              >
+                                Encerrar Sprint
+                              </Button>
+                            )}
+
+                            {selectedSprintData.status !== 'concluido' && (
+                              <Button 
+                                onClick={() => {
+                                  setIsEditingSprint(true);
+                                  setEditSprint({
+                                    data_inicio: new Date(selectedSprintData.data_inicio),
+                                    data_fim: new Date(selectedSprintData.data_fim)
+                                  });
+                                }}
+                                size="sm"
+                                variant="outline"
+                                className="w-full"
+                              >
+                                Alterar Datas
+                              </Button>
+                            )}
+                          </div>
+                        </>
+                      ) : (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="text-sm font-medium block mb-2">Nova Data de Início</label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !editSprint.data_inicio && "text-muted-foreground")}>
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {editSprint.data_inicio ? format(editSprint.data_inicio, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecione a data'}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={editSprint.data_inicio}
+                                  onSelect={(date) => setEditSprint({ ...editSprint, data_inicio: date })}
+                                  initialFocus
+                                  className="pointer-events-auto"
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+
+                          <div>
+                            <label className="text-sm font-medium block mb-2">Nova Data de Fim</label>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button variant="outline" className={cn("w-full justify-start text-left font-normal", !editSprint.data_fim && "text-muted-foreground")}>
+                                  <CalendarIcon className="mr-2 h-4 w-4" />
+                                  {editSprint.data_fim ? format(editSprint.data_fim, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecione a data'}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <Calendar
+                                  mode="single"
+                                  selected={editSprint.data_fim}
+                                  onSelect={(date) => setEditSprint({ ...editSprint, data_fim: date })}
+                                  initialFocus
+                                  className="pointer-events-auto"
+                                />
+                              </PopoverContent>
+                            </Popover>
+                          </div>
+
+                          <div className="flex gap-2">
+                            <Button onClick={handleUpdateSprintDates} size="sm" className="flex-1">
+                              Salvar
+                            </Button>
+                            <Button 
+                              onClick={() => {
+                                setIsEditingSprint(false);
+                                setEditSprint({ data_inicio: undefined, data_fim: undefined });
+                              }} 
+                              size="sm"
+                              variant="outline" 
+                              className="flex-1"
+                            >
+                              Cancelar
+                            </Button>
+                          </div>
+                        </div>
                       )}
                     </div>
                   )}
