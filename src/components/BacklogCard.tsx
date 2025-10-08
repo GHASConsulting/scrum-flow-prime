@@ -63,13 +63,21 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
     }
 
     try {
+      const hoje = new Date();
+      const dataFim = new Date(newSubtarefa.fim);
+      
+      // Garantir que a data fim seja >= hoje
+      if (dataFim < hoje) {
+        dataFim.setHours(23, 59, 59, 999);
+      }
+      
       await addSubtarefa({
         sprint_tarefa_id: sprintTarefa.id,
         titulo: newSubtarefa.titulo.trim(),
-        responsavel: newSubtarefa.responsavel || null,
-        inicio: format(new Date(), 'yyyy-MM-dd\'T\'HH:mm:ssXXX'),
-        fim: format(newSubtarefa.fim, 'yyyy-MM-dd\'T\'HH:mm:ssXXX'),
-        status: newSubtarefa.status
+        responsavel: newSubtarefa.responsavel?.trim() || null,
+        inicio: hoje.toISOString(),
+        fim: dataFim.toISOString(),
+        status: 'todo'
       });
 
       setNewSubtarefa({
@@ -78,6 +86,8 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
         fim: undefined,
         status: 'todo'
       });
+      
+      toast.success('Subtarefa adicionada com sucesso');
     } catch (error) {
       // Error já tratado no hook
     }
