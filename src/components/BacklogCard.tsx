@@ -11,6 +11,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { BacklogItem, Status } from '@/types/scrum';
 import { statusLabels, prioridadeLabels } from '@/lib/formatters';
 import { useSprintTarefas } from '@/hooks/useSprintTarefas';
+import { useSprints } from '@/hooks/useSprints';
 import { useSubtarefas } from '@/hooks/useSubtarefas';
 import { ChevronDown, ChevronUp, ArrowRight, ArrowLeft, Plus, Trash2, CalendarIcon } from 'lucide-react';
 import { format } from 'date-fns';
@@ -34,10 +35,14 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
   });
   
   const { sprintTarefas } = useSprintTarefas();
+  const { sprints } = useSprints();
   const { subtarefas, addSubtarefa, updateSubtarefa, deleteSubtarefa } = useSubtarefas();
   
   const sprintTarefa = sprintTarefas.find(st => st.backlog_id === item.id);
   const isInSprint = !!sprintTarefa;
+  
+  // Obter a sprint associada
+  const sprint = sprintTarefa ? sprints.find(s => s.id === sprintTarefa.sprint_id) : null;
   
   // Filtrar subtarefas desta tarefa
   const subtarefasDaTarefa = sprintTarefa 
@@ -52,6 +57,11 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
       return;
     }
 
+    if (!sprint) {
+      toast.error('Sprint não encontrada');
+      return;
+    }
+
     if (!newSubtarefa.titulo.trim()) {
       toast.error('O título da subtarefa é obrigatório');
       return;
@@ -62,14 +72,30 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
       return;
     }
 
+    // Validar se a data fim está dentro do período da sprint
+    const dataFimSubtarefa = new Date(newSubtarefa.fim);
+    dataFimSubtarefa.setHours(0, 0, 0, 0);
+    
+    const dataInicioSprint = new Date(sprint.data_inicio);
+    dataInicioSprint.setHours(0, 0, 0, 0);
+    
+    const dataFimSprint = new Date(sprint.data_fim);
+    dataFimSprint.setHours(23, 59, 59, 999);
+
+    if (dataFimSubtarefa < dataInicioSprint) {
+      toast.error(`A data de conclusão deve ser após o início da sprint (${format(dataInicioSprint, 'dd/MM/yyyy', { locale: ptBR })})`);
+      return;
+    }
+
+    if (dataFimSubtarefa > dataFimSprint) {
+      toast.error(`A data de conclusão deve ser antes do fim da sprint (${format(dataFimSprint, 'dd/MM/yyyy', { locale: ptBR })})`);
+      return;
+    }
+
     try {
       const hoje = new Date();
       const dataFim = new Date(newSubtarefa.fim);
-      
-      // Garantir que a data fim seja >= hoje
-      if (dataFim < hoje) {
-        dataFim.setHours(23, 59, 59, 999);
-      }
+      dataFim.setHours(23, 59, 59, 999);
       
       await addSubtarefa({
         sprint_tarefa_id: sprintTarefa.id,
