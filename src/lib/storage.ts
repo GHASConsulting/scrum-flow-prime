@@ -1,10 +1,13 @@
-import { BacklogItem, Sprint, SprintTarefa, Subtarefa } from '@/types/scrum';
+import { BacklogItem, Sprint, SprintTarefa, Subtarefa, Daily, Review, Retrospectiva } from '@/types/scrum';
 
 const STORAGE_KEYS = {
   BACKLOG: 'scrum_backlog',
   SPRINTS: 'scrum_sprints',
   SPRINT_TAREFAS: 'scrum_sprint_tarefas',
   SUBTAREFAS: 'scrum_subtarefas',
+  DAILIES: 'scrum_dailies',
+  REVIEWS: 'scrum_reviews',
+  RETROSPECTIVAS: 'scrum_retrospectivas',
   INITIALIZED: 'scrum_initialized'
 };
 
@@ -120,6 +123,66 @@ export const deleteSubtarefa = (id: string) => {
 
 export const getSubtarefasBySprintTarefa = (sprintTarefaId: string): Subtarefa[] => {
   return getSubtarefas().filter(s => s.sprint_tarefa_id === sprintTarefaId);
+};
+
+// Dailies
+export const getDailies = (): Daily[] => {
+  const data = localStorage.getItem(STORAGE_KEYS.DAILIES);
+  return data ? JSON.parse(data) : [];
+};
+
+export const saveDailies = (dailies: Daily[]) => {
+  localStorage.setItem(STORAGE_KEYS.DAILIES, JSON.stringify(dailies));
+};
+
+export const addDaily = (daily: Daily) => {
+  const dailies = getDailies();
+  dailies.push(daily);
+  saveDailies(dailies);
+};
+
+export const getDailiesBySprint = (sprintId: string): Daily[] => {
+  return getDailies().filter(d => d.sprint_id === sprintId);
+};
+
+// Reviews
+export const getReviews = (): Review[] => {
+  const data = localStorage.getItem(STORAGE_KEYS.REVIEWS);
+  return data ? JSON.parse(data) : [];
+};
+
+export const saveReviews = (reviews: Review[]) => {
+  localStorage.setItem(STORAGE_KEYS.REVIEWS, JSON.stringify(reviews));
+};
+
+export const addReview = (review: Review) => {
+  const reviews = getReviews();
+  reviews.push(review);
+  saveReviews(reviews);
+};
+
+export const getReviewBySprint = (sprintId: string): Review | undefined => {
+  return getReviews().find(r => r.sprint_id === sprintId);
+};
+
+// Retrospectivas
+export const getRetrospectivas = (): Retrospectiva[] => {
+  const data = localStorage.getItem(STORAGE_KEYS.RETROSPECTIVAS);
+  return data ? JSON.parse(data) : [];
+};
+
+export const saveRetrospectivas = (retrospectivas: Retrospectiva[]) => {
+  localStorage.setItem(STORAGE_KEYS.RETROSPECTIVAS, JSON.stringify(retrospectivas));
+};
+
+export const addRetrospectiva = (retrospectiva: Retrospectiva) => {
+  const retrospectivas = getRetrospectivas();
+  retrospectivas.push(retrospectiva);
+  saveRetrospectivas(retrospectivas);
+};
+
+export const getRetrospectivaBySprint = (sprintId: string): Retrospectiva | undefined => {
+  return getRetrospectivas().find(r => r.sprint_id === sprintId);
 };
 
 // Inicialização com dados de exemplo

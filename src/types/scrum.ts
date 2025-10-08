@@ -35,3 +35,30 @@ export interface Subtarefa {
   fim: string;
   status?: Status;
 }
+
+export interface Daily {
+  id: string;
+  sprint_id: string;
+  usuario: string;
+  data: string;
+  ontem: string;
+  hoje: string;
+  impedimentos: string;
+}
+
+export interface Review {
+  id: string;
+  sprint_id: string;
+  entregas: string;
+  observacoes: string;
+  data: string;
+}
+
+export interface Retrospectiva {
+  id: string;
+  sprint_id: string;
+  bom: string[];
+  melhorar: string[];
+  acoes: string[];
+  data: string;
+}
