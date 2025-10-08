@@ -14,7 +14,161 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      backlog: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          id: string
+          prioridade: string
+          responsavel: string | null
+          status: string
+          story_points: number
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          prioridade: string
+          responsavel?: string | null
+          status: string
+          story_points: number
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          prioridade?: string
+          responsavel?: string | null
+          status?: string
+          story_points?: number
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sprint: {
+        Row: {
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          id: string
+          nome: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          id?: string
+          nome: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          id?: string
+          nome?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      sprint_tarefas: {
+        Row: {
+          backlog_id: string
+          created_at: string
+          id: string
+          responsavel: string | null
+          sprint_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          backlog_id: string
+          created_at?: string
+          id?: string
+          responsavel?: string | null
+          sprint_id: string
+          status: string
+          updated_at?: string
+        }
+        Update: {
+          backlog_id?: string
+          created_at?: string
+          id?: string
+          responsavel?: string | null
+          sprint_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sprint_tarefas_backlog_id_fkey"
+            columns: ["backlog_id"]
+            isOneToOne: false
+            referencedRelation: "backlog"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sprint_tarefas_sprint_id_fkey"
+            columns: ["sprint_id"]
+            isOneToOne: false
+            referencedRelation: "sprint"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subtarefas: {
+        Row: {
+          created_at: string
+          fim: string
+          id: string
+          inicio: string
+          responsavel: string | null
+          sprint_tarefa_id: string
+          status: string | null
+          titulo: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          fim: string
+          id?: string
+          inicio: string
+          responsavel?: string | null
+          sprint_tarefa_id: string
+          status?: string | null
+          titulo: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          fim?: string
+          id?: string
+          inicio?: string
+          responsavel?: string | null
+          sprint_tarefa_id?: string
+          status?: string | null
+          titulo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subtarefas_sprint_tarefa_id_fkey"
+            columns: ["sprint_tarefa_id"]
+            isOneToOne: false
+            referencedRelation: "sprint_tarefas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
