@@ -10,6 +10,7 @@ import Daily from "./pages/Daily";
 import Review from "./pages/Review";
 import Retrospectiva from "./pages/Retrospectiva";
 import Auth from "./pages/Auth";
+import Administracao from "./pages/Administracao";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
         <Route path="/daily" element={<Daily />} />
         <Route path="/review" element={<Review />} />
         <Route path="/retrospectiva" element={<Retrospectiva />} />
+        <Route path="/administracao" element={<Administracao />} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>
