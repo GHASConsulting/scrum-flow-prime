@@ -129,33 +129,8 @@ const SprintPlanning = () => {
 
   const handleFinishSprint = async (sprintId: string) => {
     try {
-      // Buscar tarefas não validadas da sprint
-      const tarefasNaoValidadas = sprintTarefas
-        .filter(st => st.sprint_id === sprintId && st.status !== 'validated')
-        .map(st => backlog.find(b => b.id === st.backlog_id))
-        .filter(b => b !== undefined && b.status !== 'validated');
-
-      // Encerrar a sprint
       await updateSprint(sprintId, { status: 'concluido' });
-
-      // Duplicar tarefas não validadas no backlog
-      if (tarefasNaoValidadas.length > 0) {
-        for (const tarefa of tarefasNaoValidadas) {
-          if (tarefa) {
-            await addBacklogItem({
-              titulo: tarefa.titulo,
-              descricao: tarefa.descricao,
-              story_points: tarefa.story_points,
-              prioridade: tarefa.prioridade,
-              responsavel: tarefa.responsavel,
-              status: 'todo'
-            });
-          }
-        }
-        toast.success(`Sprint encerrada. ${tarefasNaoValidadas.length} tarefa(s) não validada(s) duplicada(s) no backlog para a próxima sprint.`);
-      } else {
-        toast.success('Sprint encerrada com sucesso');
-      }
+      toast.success('Sprint encerrada com sucesso');
     } catch (error) {
       // Error já tratado no hook
     }
