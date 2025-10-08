@@ -30,6 +30,7 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
   const [newSubtarefa, setNewSubtarefa] = useState({
     titulo: '',
     responsavel: item.responsavel,
+    inicio: undefined as Date | undefined,
     fim: undefined as Date | undefined,
     status: 'todo' as Status
   });
@@ -67,13 +68,20 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
       return;
     }
 
+    if (!newSubtarefa.inicio) {
+      toast.error('A data início é obrigatória');
+      return;
+    }
+
     if (!newSubtarefa.fim) {
       toast.error('A data fim é obrigatória');
       return;
     }
 
     try {
-      const hoje = new Date();
+      const dataInicio = new Date(newSubtarefa.inicio);
+      dataInicio.setHours(0, 0, 0, 0);
+      
       const dataFim = new Date(newSubtarefa.fim);
       dataFim.setHours(23, 59, 59, 999);
       
@@ -81,7 +89,7 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
         sprint_tarefa_id: sprintTarefa.id,
         titulo: newSubtarefa.titulo.trim(),
         responsavel: newSubtarefa.responsavel?.trim() || null,
-        inicio: hoje.toISOString(),
+        inicio: dataInicio.toISOString(),
         fim: dataFim.toISOString(),
         status: 'todo'
       });
@@ -89,6 +97,7 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
       setNewSubtarefa({
         titulo: '',
         responsavel: item.responsavel,
+        inicio: undefined,
         fim: undefined,
         status: 'todo'
       });
@@ -263,6 +272,32 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
                     onChange={(e) => setNewSubtarefa({ ...newSubtarefa, responsavel: e.target.value })}
                     placeholder="Nome do responsável"
                   />
+                </div>
+
+                <div>
+                  <Label>Data Início *</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button 
+                        variant="outline" 
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !newSubtarefa.inicio && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {newSubtarefa.inicio ? format(newSubtarefa.inicio, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecione a data'}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={newSubtarefa.inicio}
+                        onSelect={(date) => setNewSubtarefa({ ...newSubtarefa, inicio: date })}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div>
