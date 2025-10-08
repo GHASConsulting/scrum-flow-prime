@@ -53,6 +53,25 @@ const SprintPlanning = () => {
     data_fim: undefined as Date | undefined
   });
 
+  const calculateSprintStatus = (dataInicio: string, dataFim: string): 'planejamento' | 'ativo' | 'concluido' => {
+    const hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    
+    const inicio = new Date(dataInicio);
+    inicio.setHours(0, 0, 0, 0);
+    
+    const fim = new Date(dataFim);
+    fim.setHours(0, 0, 0, 0);
+
+    if (hoje < inicio) {
+      return 'planejamento';
+    } else if (hoje > fim) {
+      return 'concluido';
+    } else {
+      return 'ativo';
+    }
+  };
+
   const handleCreateSprint = async () => {
     if (!newSprint.nome || !newSprint.data_inicio || !newSprint.data_fim) {
       toast.error('Preencha todos os campos da sprint');
@@ -65,16 +84,28 @@ const SprintPlanning = () => {
     }
 
     try {
+      const dataInicioFormatted = format(newSprint.data_inicio, 'yyyy-MM-dd');
+      const dataFimFormatted = format(newSprint.data_fim, 'yyyy-MM-dd');
+      const status = calculateSprintStatus(dataInicioFormatted, dataFimFormatted);
+
       const sprint = await addSprint({
         nome: newSprint.nome,
-        data_inicio: format(newSprint.data_inicio, 'yyyy-MM-dd'),
-        data_fim: format(newSprint.data_fim, 'yyyy-MM-dd'),
-        status: 'planejamento'
+        data_inicio: dataInicioFormatted,
+        data_fim: dataFimFormatted,
+        status
       });
 
       setSelectedSprint(sprint.id);
       setIsCreatingSprint(false);
       setNewSprint({ nome: '', data_inicio: undefined, data_fim: undefined });
+      
+      if (status === 'ativo') {
+        toast.success('Sprint criada e ativada automaticamente');
+      } else if (status === 'concluido') {
+        toast.success('Sprint criada com status concluído (datas no passado)');
+      } else {
+        toast.success('Sprint criada com status planejamento');
+      }
     } catch (error) {
       // Error já tratado no hook
     }
