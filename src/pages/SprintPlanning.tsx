@@ -286,7 +286,7 @@ const SprintPlanning = () => {
       .filter(st => st.sprint_id === selectedSprint)
       .map(st => st.backlog_id);
     
-    return backlog.filter(b => !tarefasNaSprint.includes(b.id));
+    return backlog.filter(b => !tarefasNaSprint.includes(b.id) && b.status !== 'validated');
   };
 
   const getTarefasDaSprint = () => {
