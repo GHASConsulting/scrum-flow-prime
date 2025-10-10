@@ -56,8 +56,8 @@ const Backlog = () => {
       responsavel: item.responsavel || ''
     }));
 
-  // Aplicar filtro por responsável
-  if (selectedResponsavel) {
+  // Aplicar filtro por responsável (ignorar se for "all")
+  if (selectedResponsavel && selectedResponsavel !== 'all') {
     tarefasNasSprints = tarefasNasSprints.filter(item => item.responsavel === selectedResponsavel);
   }
 
@@ -83,7 +83,7 @@ const Backlog = () => {
           <div className="flex gap-3">
             <div className="w-64">
               <Select 
-                value={selectedResponsavel} 
+                value={selectedResponsavel || 'all'} 
                 onValueChange={setSelectedResponsavel}
                 disabled={userRole === 'operador'}
               >
@@ -91,7 +91,7 @@ const Backlog = () => {
                   <SelectValue placeholder="Filtrar por responsável" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Todos</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
                   {profiles.map(profile => (
                     <SelectItem key={profile.id} value={profile.nome}>
                       {profile.nome}
