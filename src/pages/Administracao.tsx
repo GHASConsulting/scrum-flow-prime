@@ -11,7 +11,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Trash2 } from "lucide-react";
+import { Trash2, Search, Edit, KeyRound } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
 const userSchema = z.object({
   nome: z.string().min(3, { message: "Nome deve ter no mínimo 3 caracteres" }),
@@ -33,6 +35,13 @@ export default function Administracao() {
   const navigate = useNavigate();
   const { user, userRole, loading } = useAuth();
   const [users, setUsers] = useState<UserProfile[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
+  const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
+  const [editFormData, setEditFormData] = useState({ nome: "", role: "operador" as "administrador" | "operador" });
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
   const [formData, setFormData] = useState({
     nome: "",
     email: "",
@@ -139,6 +148,105 @@ export default function Administracao() {
     fetchUsers();
   };
 
+  const handleSelectUser = (userId: string) => {
+    const newSelected = new Set(selectedUsers);
+    if (newSelected.has(userId)) {
+      newSelected.delete(userId);
+    } else {
+      newSelected.add(userId);
+    }
+    setSelectedUsers(newSelected);
+  };
+
+  const handleEditUser = () => {
+    if (selectedUsers.size !== 1) {
+      toast.error("Selecione apenas um usuário para editar");
+      return;
+    }
+    const userId = Array.from(selectedUsers)[0];
+    const userToEdit = users.find(u => u.user_id === userId);
+    if (userToEdit) {
+      setEditingUser(userToEdit);
+      setEditFormData({
+        nome: userToEdit.nome,
+        role: userToEdit.user_roles?.[0]?.role as "administrador" | "operador" || "operador"
+      });
+      setIsEditDialogOpen(true);
+    }
+  };
+
+  const handleUpdateUser = async () => {
+    if (!editingUser) return;
+    setSubmitting(true);
+
+    try {
+      // Atualizar perfil
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ nome: editFormData.nome })
+        .eq("user_id", editingUser.user_id);
+
+      if (profileError) throw profileError;
+
+      // Atualizar role
+      const { error: roleError } = await supabase
+        .from("user_roles")
+        .update({ role: editFormData.role })
+        .eq("user_id", editingUser.user_id);
+
+      if (roleError) throw roleError;
+
+      toast.success("Usuário atualizado com sucesso!");
+      setIsEditDialogOpen(false);
+      setSelectedUsers(new Set());
+      fetchUsers();
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao atualizar usuário");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleResetPassword = () => {
+    if (selectedUsers.size !== 1) {
+      toast.error("Selecione apenas um usuário para redefinir a senha");
+      return;
+    }
+    setNewPassword("");
+    setIsResetPasswordDialogOpen(true);
+  };
+
+  const handleConfirmResetPassword = async () => {
+    if (!newPassword || newPassword.length < 6) {
+      toast.error("A senha deve ter no mínimo 6 caracteres");
+      return;
+    }
+
+    const userId = Array.from(selectedUsers)[0];
+    setSubmitting(true);
+
+    try {
+      const { error } = await supabase.auth.admin.updateUserById(userId, {
+        password: newPassword
+      });
+
+      if (error) throw error;
+
+      toast.success("Senha redefinida com sucesso!");
+      setIsResetPasswordDialogOpen(false);
+      setSelectedUsers(new Set());
+      setNewPassword("");
+    } catch (error: any) {
+      toast.error(error.message || "Erro ao redefinir senha");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const filteredUsers = users.filter(user =>
+    user.nome.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
   if (loading) {
     return (
       <Layout>
@@ -229,19 +337,57 @@ export default function Administracao() {
         <Card>
           <CardHeader>
             <CardTitle>Usuários Cadastrados</CardTitle>
+            <CardDescription>
+              Gerencie os usuários do sistema
+            </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-4">
+            <div className="flex gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <Button
+                onClick={handleEditUser}
+                disabled={selectedUsers.size !== 1}
+                variant="outline"
+              >
+                <Edit className="h-4 w-4 mr-2" />
+                Editar
+              </Button>
+              <Button
+                onClick={handleResetPassword}
+                disabled={selectedUsers.size !== 1}
+                variant="outline"
+              >
+                <KeyRound className="h-4 w-4 mr-2" />
+                Redefinir Senha
+              </Button>
+            </div>
+
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-12"></TableHead>
                   <TableHead>Nome</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {users.map((user) => (
+                {filteredUsers.map((user) => (
                   <TableRow key={user.id}>
+                    <TableCell>
+                      <Checkbox
+                        checked={selectedUsers.has(user.user_id)}
+                        onCheckedChange={() => handleSelectUser(user.user_id)}
+                      />
+                    </TableCell>
                     <TableCell>{user.nome}</TableCell>
                     <TableCell>
                       {user.user_roles?.[0]?.role === "administrador"
@@ -263,6 +409,91 @@ export default function Administracao() {
             </Table>
           </CardContent>
         </Card>
+
+        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Editar Usuário</DialogTitle>
+              <DialogDescription>
+                Atualize os dados do usuário selecionado
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-nome">Nome</Label>
+                <Input
+                  id="edit-nome"
+                  value={editFormData.nome}
+                  onChange={(e) => setEditFormData({ ...editFormData, nome: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-role">Tipo de Usuário</Label>
+                <Select
+                  value={editFormData.role}
+                  onValueChange={(value: "administrador" | "operador") =>
+                    setEditFormData({ ...editFormData, role: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="administrador">Administrador</SelectItem>
+                    <SelectItem value="operador">Operador</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleUpdateUser} disabled={submitting} className="flex-1">
+                  {submitting ? "Salvando..." : "Salvar"}
+                </Button>
+                <Button
+                  onClick={() => setIsEditDialogOpen(false)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isResetPasswordDialogOpen} onOpenChange={setIsResetPasswordDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Redefinir Senha</DialogTitle>
+              <DialogDescription>
+                Defina uma nova senha para o usuário selecionado
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="new-password">Nova Senha</Label>
+                <Input
+                  id="new-password"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                />
+              </div>
+              <div className="flex gap-2">
+                <Button onClick={handleConfirmResetPassword} disabled={submitting} className="flex-1">
+                  {submitting ? "Redefinindo..." : "Redefinir Senha"}
+                </Button>
+                <Button
+                  onClick={() => setIsResetPasswordDialogOpen(false)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </Layout>
   );
