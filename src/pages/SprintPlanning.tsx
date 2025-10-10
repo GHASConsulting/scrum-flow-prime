@@ -613,14 +613,13 @@ const SprintPlanning = () => {
                   <div>
                     <label className="text-sm font-medium">Responsável</label>
                     <Select 
-                      value={newTask.responsavel} 
+                      value={newTask.responsavel || undefined} 
                       onValueChange={(value) => setNewTask({ ...newTask, responsavel: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione um responsável" />
+                        <SelectValue placeholder="Selecione um responsável (opcional)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nenhum</SelectItem>
                         {profiles.map((profile) => (
                           <SelectItem key={profile.id} value={profile.nome}>
                             {profile.nome}
