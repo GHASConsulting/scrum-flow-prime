@@ -164,11 +164,6 @@ const SprintPlanning = () => {
   };
 
   const handleCreateTask = async () => {
-    if (!selectedSprint) {
-      toast.error('Selecione uma sprint primeiro');
-      return;
-    }
-
     if (!newTask.titulo.trim()) {
       toast.error('O título é obrigatório');
       return;
@@ -195,19 +190,12 @@ const SprintPlanning = () => {
     }
 
     try {
-      const backlogItem = await addBacklogItem({
+      await addBacklogItem({
         titulo: newTask.titulo.trim(),
         descricao: newTask.descricao.trim() || null,
         story_points: newTask.story_points,
         prioridade: newTask.prioridade,
-        responsavel: newTask.responsavel.trim() || null,
-        status: 'todo'
-      });
-
-      await addTarefaToSprint({
-        sprint_id: selectedSprint,
-        backlog_id: backlogItem.id,
-        responsavel: backlogItem.responsavel || null,
+        responsavel: newTask.responsavel.trim(),
         status: 'todo'
       });
 
@@ -219,9 +207,9 @@ const SprintPlanning = () => {
         responsavel: ''
       });
       setIsCreatingTask(false);
-      toast.success('Tarefa criada e adicionada à sprint');
+      toast.success('Tarefa criada no backlog');
     } catch (error) {
-      // Error já tratado nos hooks
+      // Error já tratado no hook
     }
   };
 
@@ -631,9 +619,9 @@ const SprintPlanning = () => {
 
                   <div className="flex gap-2">
                     <Button onClick={handleCreateTask} className="flex-1">
-                      Criar e Adicionar à Sprint
+                      Criar no Backlog
                     </Button>
-                    <Button 
+                    <Button
                       onClick={() => {
                         setIsCreatingTask(false);
                         setNewTask({
