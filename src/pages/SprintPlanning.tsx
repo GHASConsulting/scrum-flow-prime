@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useBacklog } from '@/hooks/useBacklog';
 import { useSprints } from '@/hooks/useSprints';
 import { useSprintTarefas } from '@/hooks/useSprintTarefas';
+import { useProfiles } from '@/hooks/useProfiles';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CalendarIcon, Plus, Check } from 'lucide-react';
@@ -21,6 +22,7 @@ const SprintPlanning = () => {
   const { backlog, addBacklogItem } = useBacklog();
   const { sprints, addSprint, updateSprint } = useSprints();
   const { sprintTarefas, addSprintTarefa: addTarefaToSprint } = useSprintTarefas();
+  const { profiles } = useProfiles();
   
   const [selectedSprint, setSelectedSprint] = useState<string>('');
   const [isCreatingSprint, setIsCreatingSprint] = useState(false);
@@ -610,12 +612,22 @@ const SprintPlanning = () => {
 
                   <div>
                     <label className="text-sm font-medium">Responsável</label>
-                    <Input
-                      placeholder="Nome do responsável"
-                      value={newTask.responsavel}
-                      onChange={(e) => setNewTask({ ...newTask, responsavel: e.target.value })}
-                      maxLength={100}
-                    />
+                    <Select 
+                      value={newTask.responsavel} 
+                      onValueChange={(value) => setNewTask({ ...newTask, responsavel: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione um responsável" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="">Nenhum</SelectItem>
+                        {profiles.map((profile) => (
+                          <SelectItem key={profile.id} value={profile.nome}>
+                            {profile.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
 
                   <div className="flex gap-2">
