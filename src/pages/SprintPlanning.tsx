@@ -189,8 +189,8 @@ const SprintPlanning = () => {
       return;
     }
 
-    if (newTask.responsavel && newTask.responsavel.trim().length > 100) {
-      toast.error('O nome do responsável deve ter no máximo 100 caracteres');
+    if (!newTask.responsavel || !newTask.responsavel.trim()) {
+      toast.error('O responsável é obrigatório');
       return;
     }
 
@@ -611,13 +611,13 @@ const SprintPlanning = () => {
                   </div>
 
                   <div>
-                    <label className="text-sm font-medium">Responsável</label>
+                    <label className="text-sm font-medium">Responsável *</label>
                     <Select 
                       value={newTask.responsavel || undefined} 
                       onValueChange={(value) => setNewTask({ ...newTask, responsavel: value })}
                     >
                       <SelectTrigger>
-                        <SelectValue placeholder="Selecione um responsável (opcional)" />
+                        <SelectValue placeholder="Selecione um responsável" />
                       </SelectTrigger>
                       <SelectContent>
                         {profiles.map((profile) => (
