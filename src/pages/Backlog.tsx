@@ -2,6 +2,8 @@ import { Layout } from '@/components/Layout';
 import { useBacklog } from '@/hooks/useBacklog';
 import { useSprintTarefas } from '@/hooks/useSprintTarefas';
 import { useSprints } from '@/hooks/useSprints';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfiles } from '@/hooks/useProfiles';
 import { Status, BacklogItem } from '@/types/scrum';
 import { statusLabels } from '@/lib/formatters';
 import { BacklogCard } from '@/components/BacklogCard';
@@ -13,7 +15,10 @@ const Backlog = () => {
   const { backlog, updateBacklogItem } = useBacklog();
   const { sprintTarefas } = useSprintTarefas();
   const { sprints } = useSprints();
+  const { user, userRole } = useAuth();
+  const { profiles } = useProfiles();
   const [selectedSprintId, setSelectedSprintId] = useState<string>('');
+  const [selectedResponsavel, setSelectedResponsavel] = useState<string>('');
 
   // Sprints disponíveis para filtro (planejamento ou concluído)
   const availableSprints = sprints.filter(s => s.status === 'planejamento' || s.status === 'concluido');
@@ -28,8 +33,18 @@ const Backlog = () => {
     }
   }, [activeSprint, selectedSprintId]);
 
+  // Definir responsável padrão para operadores
+  useEffect(() => {
+    if (userRole === 'operador' && user && profiles.length > 0) {
+      const userProfile = profiles.find(p => p.user_id === user.id);
+      if (userProfile) {
+        setSelectedResponsavel(userProfile.nome);
+      }
+    }
+  }, [userRole, user, profiles]);
+
   // Filtrar tarefas do sprint selecionado
-  const tarefasNasSprints: BacklogItem[] = backlog
+  let tarefasNasSprints: BacklogItem[] = backlog
     .filter(item => sprintTarefas.some(st => st.backlog_id === item.id && st.sprint_id === selectedSprintId))
     .map(item => ({
       id: item.id,
@@ -40,6 +55,11 @@ const Backlog = () => {
       status: item.status as Status,
       responsavel: item.responsavel || ''
     }));
+
+  // Aplicar filtro por responsável
+  if (selectedResponsavel) {
+    tarefasNasSprints = tarefasNasSprints.filter(item => item.responsavel === selectedResponsavel);
+  }
 
   const handleStatusChange = async (id: string, newStatus: Status) => {
     try {
@@ -60,24 +80,45 @@ const Backlog = () => {
             <h2 className="text-3xl font-bold text-foreground">Backlog</h2>
             <p className="text-muted-foreground mt-1">Tarefas das sprints organizadas por status</p>
           </div>
-          <div className="w-64">
-            <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione uma sprint" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeSprint && (
-                  <SelectItem value={activeSprint.id}>
-                    {activeSprint.nome} (Ativo)
-                  </SelectItem>
-                )}
-                {availableSprints.map(sprint => (
-                  <SelectItem key={sprint.id} value={sprint.id}>
-                    {sprint.nome} ({sprint.status === 'planejamento' ? 'Planejamento' : 'Encerrado'})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="flex gap-3">
+            <div className="w-64">
+              <Select 
+                value={selectedResponsavel} 
+                onValueChange={setSelectedResponsavel}
+                disabled={userRole === 'operador'}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Filtrar por responsável" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">Todos</SelectItem>
+                  {profiles.map(profile => (
+                    <SelectItem key={profile.id} value={profile.nome}>
+                      {profile.nome}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="w-64">
+              <Select value={selectedSprintId} onValueChange={setSelectedSprintId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma sprint" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeSprint && (
+                    <SelectItem value={activeSprint.id}>
+                      {activeSprint.nome} (Ativo)
+                    </SelectItem>
+                  )}
+                  {availableSprints.map(sprint => (
+                    <SelectItem key={sprint.id} value={sprint.id}>
+                      {sprint.nome} ({sprint.status === 'planejamento' ? 'Planejamento' : 'Encerrado'})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
         </div>
 
