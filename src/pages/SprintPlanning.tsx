@@ -14,7 +14,7 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toZonedTime } from 'date-fns-tz';
-import { CalendarIcon, Plus, Check, Trash2 } from 'lucide-react';
+import { CalendarIcon, Plus, Check, Trash2, X } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { statusLabels, formatDate } from '@/lib/formatters';
@@ -22,7 +22,7 @@ import { statusLabels, formatDate } from '@/lib/formatters';
 const SprintPlanning = () => {
   const { backlog, addBacklogItem, deleteBacklogItem } = useBacklog();
   const { sprints, addSprint, updateSprint } = useSprints();
-  const { sprintTarefas, addSprintTarefa: addTarefaToSprint } = useSprintTarefas();
+  const { sprintTarefas, addSprintTarefa: addTarefaToSprint, deleteSprintTarefa } = useSprintTarefas();
   const { profiles } = useProfiles();
   
   const [selectedSprint, setSelectedSprint] = useState<string>('');
@@ -256,6 +256,20 @@ const SprintPlanning = () => {
         status: 'todo'
       });
       toast.success('Tarefa adicionada à sprint');
+    } catch (error) {
+      // Error já tratado no hook
+    }
+  };
+
+  const handleRemoveFromSprint = async (backlogId: string) => {
+    const sprintTarefa = sprintTarefas.find(
+      st => st.sprint_id === selectedSprint && st.backlog_id === backlogId
+    );
+
+    if (!sprintTarefa) return;
+
+    try {
+      await deleteSprintTarefa(sprintTarefa.id);
     } catch (error) {
       // Error já tratado no hook
     }
@@ -543,14 +557,23 @@ const SprintPlanning = () => {
                 <div className="space-y-2">
                   {tarefasDaSprint.map(tarefa => (
                     <div key={tarefa.id} className="p-3 border rounded-lg">
-                      <div className="flex items-start justify-between">
+                      <div className="flex items-start justify-between gap-2">
                         <div className="flex-1">
                           <h4 className="font-medium text-sm">{tarefa.titulo}</h4>
                           <p className="text-xs text-muted-foreground mt-1">
                             SP: {tarefa.story_points} | {tarefa.responsavel}
                           </p>
                         </div>
-                        <Check className="h-4 w-4 text-success" />
+                        <div className="flex items-center gap-1">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => handleRemoveFromSprint(tarefa.id)}
+                            className="h-8 w-8 p-0"
+                          >
+                            <X className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}

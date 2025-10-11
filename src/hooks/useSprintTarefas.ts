@@ -62,6 +62,23 @@ export const useSprintTarefas = () => {
     }
   };
 
+  const deleteSprintTarefa = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('sprint_tarefas')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      setSprintTarefas(prev => prev.filter(t => t.id !== id));
+      toast.success('Tarefa removida da sprint');
+    } catch (error) {
+      console.error('Erro ao remover tarefa da sprint:', error);
+      toast.error('Erro ao remover tarefa da sprint');
+      throw error;
+    }
+  };
+
   useEffect(() => {
     loadSprintTarefas();
 
@@ -77,5 +94,5 @@ export const useSprintTarefas = () => {
     };
   }, []);
 
-  return { sprintTarefas, loading, addSprintTarefa, updateSprintTarefa, loadSprintTarefas };
+  return { sprintTarefas, loading, addSprintTarefa, updateSprintTarefa, deleteSprintTarefa, loadSprintTarefas };
 };
