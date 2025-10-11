@@ -30,6 +30,7 @@ const SprintPlanning = () => {
   const [defaultResponsavel, setDefaultResponsavel] = useState('');
   const [isEditingSprint, setIsEditingSprint] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [filtroResponsavel, setFiltroResponsavel] = useState<string>('');
   
   const [newTask, setNewTask] = useState<{
     titulo: string;
@@ -267,7 +268,13 @@ const SprintPlanning = () => {
       .filter(st => st.sprint_id === selectedSprint)
       .map(st => st.backlog_id);
     
-    return backlog.filter(b => !tarefasNaSprint.includes(b.id) && b.status !== 'validated');
+    let filteredBacklog = backlog.filter(b => !tarefasNaSprint.includes(b.id) && b.status !== 'validated');
+    
+    if (filtroResponsavel) {
+      filteredBacklog = filteredBacklog.filter(b => b.responsavel === filtroResponsavel);
+    }
+    
+    return filteredBacklog;
   };
 
   const getTarefasDaSprint = () => {
@@ -555,12 +562,31 @@ const SprintPlanning = () => {
 
         {selectedSprint && (
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Backlog Disponível ({availableBacklog.length})</CardTitle>
-              <Button onClick={() => setIsCreatingTask(true)} size="sm">
-                <Plus className="h-4 w-4 mr-2" />
-                Nova Tarefa
-              </Button>
+            <CardHeader>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <CardTitle>RoadMap Produtos GHAS ({availableBacklog.length})</CardTitle>
+                <Button onClick={() => setIsCreatingTask(true)} size="sm">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nova Tarefa
+                </Button>
+              </div>
+              
+              <div className="mt-4">
+                <label className="text-sm font-medium mb-2 block">Filtrar por Responsável</label>
+                <Select value={filtroResponsavel} onValueChange={setFiltroResponsavel}>
+                  <SelectTrigger className="w-full sm:w-64">
+                    <SelectValue placeholder="Todos os responsáveis" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="">Todos os responsáveis</SelectItem>
+                    {Array.from(new Set(backlog.map(b => b.responsavel).filter(Boolean))).map((responsavel) => (
+                      <SelectItem key={responsavel} value={responsavel!}>
+                        {responsavel}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </CardHeader>
             <CardContent>
               {isCreatingTask && (
