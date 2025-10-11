@@ -30,7 +30,7 @@ const SprintPlanning = () => {
   const [defaultResponsavel, setDefaultResponsavel] = useState('');
   const [isEditingSprint, setIsEditingSprint] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
-  const [filtroResponsavel, setFiltroResponsavel] = useState<string>('');
+  const [filtroResponsavel, setFiltroResponsavel] = useState<string>('all');
   
   const [newTask, setNewTask] = useState<{
     titulo: string;
@@ -270,7 +270,7 @@ const SprintPlanning = () => {
     
     let filteredBacklog = backlog.filter(b => !tarefasNaSprint.includes(b.id) && b.status !== 'validated');
     
-    if (filtroResponsavel) {
+    if (filtroResponsavel && filtroResponsavel !== 'all') {
       filteredBacklog = filteredBacklog.filter(b => b.responsavel === filtroResponsavel);
     }
     
@@ -578,7 +578,7 @@ const SprintPlanning = () => {
                     <SelectValue placeholder="Todos os responsáveis" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">Todos os responsáveis</SelectItem>
+                    <SelectItem value="all">Todos os responsáveis</SelectItem>
                     {Array.from(new Set(backlog.map(b => b.responsavel).filter(Boolean))).map((responsavel) => (
                       <SelectItem key={responsavel} value={responsavel!}>
                         {responsavel}
