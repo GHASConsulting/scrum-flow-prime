@@ -4,6 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -31,6 +32,7 @@ const SprintPlanning = () => {
   const [isEditingSprint, setIsEditingSprint] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [filtroResponsavel, setFiltroResponsavel] = useState<string>('all');
+  const [mostrarApenasSemSprint, setMostrarApenasSemSprint] = useState(false);
   
   const [newTask, setNewTask] = useState<{
     titulo: string;
@@ -288,7 +290,19 @@ const SprintPlanning = () => {
       filteredBacklog = filteredBacklog.filter(b => b.responsavel === filtroResponsavel);
     }
     
+    // Filtrar por tarefas sem sprint
+    if (mostrarApenasSemSprint) {
+      const todasTarefasEmSprints = sprintTarefas.map(st => st.backlog_id);
+      filteredBacklog = filteredBacklog.filter(b => !todasTarefasEmSprints.includes(b.id));
+    }
+    
     return filteredBacklog;
+  };
+
+  const getSprintDaTarefa = (backlogId: string) => {
+    const sprintTarefa = sprintTarefas.find(st => st.backlog_id === backlogId);
+    if (!sprintTarefa) return null;
+    return sprints.find(s => s.id === sprintTarefa.sprint_id);
   };
 
   const getTarefasDaSprint = () => {
@@ -594,21 +608,37 @@ const SprintPlanning = () => {
                 </Button>
               </div>
               
-              <div className="mt-4">
-                <label className="text-sm font-medium mb-2 block">Filtrar por Responsável</label>
-                <Select value={filtroResponsavel} onValueChange={setFiltroResponsavel}>
-                  <SelectTrigger className="w-full sm:w-64">
-                    <SelectValue placeholder="Todos os responsáveis" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os responsáveis</SelectItem>
-                    {Array.from(new Set(backlog.map(b => b.responsavel).filter(Boolean))).map((responsavel) => (
-                      <SelectItem key={responsavel} value={responsavel!}>
-                        {responsavel}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="mt-4 space-y-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Filtrar por Responsável</label>
+                  <Select value={filtroResponsavel} onValueChange={setFiltroResponsavel}>
+                    <SelectTrigger className="w-full sm:w-64">
+                      <SelectValue placeholder="Todos os responsáveis" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos os responsáveis</SelectItem>
+                      {Array.from(new Set(backlog.map(b => b.responsavel).filter(Boolean))).map((responsavel) => (
+                        <SelectItem key={responsavel} value={responsavel!}>
+                          {responsavel}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex items-center space-x-2">
+                  <Checkbox 
+                    id="sem-sprint" 
+                    checked={mostrarApenasSemSprint}
+                    onCheckedChange={(checked) => setMostrarApenasSemSprint(checked === true)}
+                  />
+                  <label
+                    htmlFor="sem-sprint"
+                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Mostrar apenas tarefas fora de sprint
+                  </label>
+                </div>
               </div>
             </CardHeader>
             <CardContent>
@@ -708,49 +738,60 @@ const SprintPlanning = () => {
 
               {availableBacklog.length > 0 ? (
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                  {availableBacklog.map(item => (
-                    <div key={item.id} className="p-4 border rounded-lg space-y-3">
-                      <div>
-                        <h4 className="font-semibold text-sm">{item.titulo}</h4>
-                        <p className="text-xs text-muted-foreground mt-1">{item.descricao}</p>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <Badge variant="outline" className="text-xs">SP: {item.story_points}</Badge>
-                        <Badge variant="outline" className="text-xs">Em Planejamento/Fora Do Sprint</Badge>
-                      </div>
+                  {availableBacklog.map(item => {
+                    const sprintDaTarefa = getSprintDaTarefa(item.id);
+                    return (
+                      <div key={item.id} className="p-4 border rounded-lg space-y-3">
+                        <div>
+                          <h4 className="font-semibold text-sm">{item.titulo}</h4>
+                          <p className="text-xs text-muted-foreground mt-1">{item.descricao}</p>
+                        </div>
+                        
+                        <div className="flex gap-2 flex-wrap">
+                          <Badge variant="outline" className="text-xs">SP: {item.story_points}</Badge>
+                          {sprintDaTarefa ? (
+                            <Badge variant="secondary" className="text-xs">
+                              Sprint: {sprintDaTarefa.nome}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-xs">Fora do Sprint</Badge>
+                          )}
+                        </div>
 
-                      <p className="text-xs text-muted-foreground">
-                        Responsável: {item.responsavel}
-                      </p>
+                        <p className="text-xs text-muted-foreground">
+                          Responsável: {item.responsavel}
+                        </p>
 
-                      <div className="flex gap-2">
-                        <Button 
-                          onClick={() => handleAddToSprint(item.id)} 
-                          size="sm" 
-                          className="flex-1"
-                        >
-                          <Plus className="h-3 w-3 mr-1" />
-                          Adicionar à Sprint
-                        </Button>
-                        <Button
-                          onClick={() => {
-                            if (confirm('Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.')) {
-                              deleteBacklogItem(item.id);
-                            }
-                          }}
-                          size="sm"
-                          variant="destructive"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button 
+                            onClick={() => handleAddToSprint(item.id)} 
+                            size="sm" 
+                            className="flex-1"
+                          >
+                            <Plus className="h-3 w-3 mr-1" />
+                            Adicionar à Sprint
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              if (confirm('Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.')) {
+                                deleteBacklogItem(item.id);
+                              }
+                            }}
+                            size="sm"
+                            variant="destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : !isCreatingTask && (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  Nenhuma tarefa disponível no backlog. Crie uma nova tarefa acima.
+                  {mostrarApenasSemSprint 
+                    ? 'Nenhuma tarefa fora de sprint encontrada.' 
+                    : 'Nenhuma tarefa disponível no backlog. Crie uma nova tarefa acima.'}
                 </p>
               )}
             </CardContent>
