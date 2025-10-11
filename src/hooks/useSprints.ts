@@ -49,13 +49,16 @@ export const useSprints = () => {
 
   const updateSprint = async (id: string, updates: Partial<Sprint>) => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('sprint')
         .update(updates)
-        .eq('id', id);
+        .eq('id', id)
+        .select()
+        .single();
 
       if (error) throw error;
-      setSprints(prev => prev.map(s => s.id === id ? { ...s, ...updates } : s));
+      setSprints(prev => prev.map(s => s.id === id ? data : s));
+      toast.success('Sprint atualizada com sucesso');
     } catch (error) {
       console.error('Erro ao atualizar sprint:', error);
       toast.error('Erro ao atualizar sprint');
