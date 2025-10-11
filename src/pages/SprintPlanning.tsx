@@ -140,21 +140,36 @@ const SprintPlanning = () => {
   };
 
   const handleUpdateSprintDates = async () => {
-    if (!selectedSprintData || !editSprint.data_inicio || !editSprint.data_fim) {
-      toast.error('Preencha ambas as datas');
+    if (!selectedSprintData) {
       return;
     }
 
-    if (editSprint.data_fim < editSprint.data_inicio) {
+    // Usar as datas atuais da sprint se não foram editadas
+    const dataInicio = editSprint.data_inicio || toZonedTime(parseISO(selectedSprintData.data_inicio), 'America/Sao_Paulo');
+    const dataFim = editSprint.data_fim || toZonedTime(parseISO(selectedSprintData.data_fim), 'America/Sao_Paulo');
+
+    if (dataFim < dataInicio) {
       toast.error('Data de fim deve ser posterior à data de início');
       return;
     }
 
     try {
-      await updateSprint(selectedSprintData.id, {
-        data_inicio: format(editSprint.data_inicio, 'yyyy-MM-dd'),
-        data_fim: format(editSprint.data_fim, 'yyyy-MM-dd')
-      });
+      const updates: { data_inicio?: string; data_fim?: string } = {};
+      
+      if (editSprint.data_inicio) {
+        updates.data_inicio = format(editSprint.data_inicio, 'yyyy-MM-dd');
+      }
+      
+      if (editSprint.data_fim) {
+        updates.data_fim = format(editSprint.data_fim, 'yyyy-MM-dd');
+      }
+
+      if (Object.keys(updates).length === 0) {
+        toast.error('Selecione pelo menos uma data para atualizar');
+        return;
+      }
+
+      await updateSprint(selectedSprintData.id, updates);
 
       setIsEditingSprint(false);
       setEditSprint({ data_inicio: undefined, data_fim: undefined });
