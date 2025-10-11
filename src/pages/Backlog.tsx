@@ -12,7 +12,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useState, useEffect } from 'react';
 
 const Backlog = () => {
-  const { backlog, updateBacklogItem, deleteBacklogItem } = useBacklog();
+  const { backlog, updateBacklogItem } = useBacklog();
   const { sprintTarefas } = useSprintTarefas();
   const { sprints } = useSprints();
   const { user, userRole } = useAuth();
@@ -143,8 +143,6 @@ const Backlog = () => {
                         item={item}
                         onStatusChange={handleStatusChange}
                         onUpdate={() => {}}
-                        onDelete={deleteBacklogItem}
-                        userRole={userRole}
                       />
                     ))
                   )}

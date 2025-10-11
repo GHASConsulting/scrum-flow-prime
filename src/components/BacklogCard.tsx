@@ -24,11 +24,9 @@ interface BacklogCardProps {
   item: BacklogItem;
   onStatusChange: (id: string, newStatus: Status) => void;
   onUpdate: () => void;
-  onDelete?: (id: string) => void;
-  userRole?: 'administrador' | 'operador' | null;
 }
 
-export const BacklogCard = ({ item, onStatusChange, onUpdate, onDelete, userRole }: BacklogCardProps) => {
+export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps) => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isSubtarefasOpen, setIsSubtarefasOpen] = useState(true);
   const [isNovaSubtarefaOpen, setIsNovaSubtarefaOpen] = useState(false);
@@ -214,19 +212,6 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate, onDelete, userRole
               >
                 {statusLabels[getNextStatus(item.status)!]}
                 <ArrowRight className="h-3 w-3 ml-1" />
-              </Button>
-            )}
-            {userRole === 'administrador' && onDelete && (
-              <Button
-                variant="destructive"
-                size="sm"
-                onClick={() => {
-                  if (confirm('Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.')) {
-                    onDelete(item.id);
-                  }
-                }}
-              >
-                <Trash2 className="h-4 w-4" />
               </Button>
             )}
           </div>

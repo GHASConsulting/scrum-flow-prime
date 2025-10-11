@@ -13,13 +13,13 @@ import { useSprintTarefas } from '@/hooks/useSprintTarefas';
 import { useProfiles } from '@/hooks/useProfiles';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Plus, Check } from 'lucide-react';
+import { CalendarIcon, Plus, Check, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { statusLabels } from '@/lib/formatters';
 
 const SprintPlanning = () => {
-  const { backlog, addBacklogItem } = useBacklog();
+  const { backlog, addBacklogItem, deleteBacklogItem } = useBacklog();
   const { sprints, addSprint, updateSprint } = useSprints();
   const { sprintTarefas, addSprintTarefa: addTarefaToSprint } = useSprintTarefas();
   const { profiles } = useProfiles();
@@ -652,21 +652,34 @@ const SprintPlanning = () => {
                       
                       <div className="flex gap-2">
                         <Badge variant="outline" className="text-xs">SP: {item.story_points}</Badge>
-                        <Badge variant="outline" className="text-xs">{statusLabels[item.status]}</Badge>
+                        <Badge variant="outline" className="text-xs">Em Planejamento/Fora Do Sprint</Badge>
                       </div>
 
                       <p className="text-xs text-muted-foreground">
                         Responsável: {item.responsavel}
                       </p>
 
-                      <Button 
-                        onClick={() => handleAddToSprint(item.id)} 
-                        size="sm" 
-                        className="w-full"
-                      >
-                        <Plus className="h-3 w-3 mr-1" />
-                        Adicionar à Sprint
-                      </Button>
+                      <div className="flex gap-2">
+                        <Button 
+                          onClick={() => handleAddToSprint(item.id)} 
+                          size="sm" 
+                          className="flex-1"
+                        >
+                          <Plus className="h-3 w-3 mr-1" />
+                          Adicionar à Sprint
+                        </Button>
+                        <Button
+                          onClick={() => {
+                            if (confirm('Tem certeza que deseja excluir esta tarefa? Esta ação não pode ser desfeita.')) {
+                              deleteBacklogItem(item.id);
+                            }
+                          }}
+                          size="sm"
+                          variant="destructive"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
                   ))}
                 </div>
