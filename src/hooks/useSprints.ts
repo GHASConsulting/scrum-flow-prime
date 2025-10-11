@@ -57,8 +57,11 @@ export const useSprints = () => {
         .single();
 
       if (error) throw error;
+      
+      // Atualiza o estado imediatamente com os dados retornados
       setSprints(prev => prev.map(s => s.id === id ? data : s));
-      toast.success('Sprint atualizada com sucesso');
+      
+      return data;
     } catch (error) {
       console.error('Erro ao atualizar sprint:', error);
       toast.error('Erro ao atualizar sprint');
