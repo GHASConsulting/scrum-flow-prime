@@ -11,12 +11,13 @@ import { useBacklog } from '@/hooks/useBacklog';
 import { useSprints } from '@/hooks/useSprints';
 import { useSprintTarefas } from '@/hooks/useSprintTarefas';
 import { useProfiles } from '@/hooks/useProfiles';
-import { format } from 'date-fns';
+import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { toZonedTime } from 'date-fns-tz';
 import { CalendarIcon, Plus, Check, Trash2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import { statusLabels } from '@/lib/formatters';
+import { statusLabels, formatDate } from '@/lib/formatters';
 
 const SprintPlanning = () => {
   const { backlog, addBacklogItem, deleteBacklogItem } = useBacklog();
@@ -312,7 +313,7 @@ const SprintPlanning = () => {
                       {!isEditingSprint ? (
                         <>
                           <p className="text-sm text-muted-foreground">
-                            {format(new Date(selectedSprintData.data_inicio), 'dd/MM/yyyy', { locale: ptBR })} - {format(new Date(selectedSprintData.data_fim), 'dd/MM/yyyy', { locale: ptBR })}
+                            {formatDate(selectedSprintData.data_inicio)} - {formatDate(selectedSprintData.data_fim)}
                           </p>
                           
                           <div className="space-y-2">
@@ -342,8 +343,8 @@ const SprintPlanning = () => {
                                 onClick={() => {
                                   setIsEditingSprint(true);
                                   setEditSprint({
-                                    data_inicio: new Date(selectedSprintData.data_inicio),
-                                    data_fim: new Date(selectedSprintData.data_fim)
+                                    data_inicio: toZonedTime(parseISO(selectedSprintData.data_inicio), 'America/Sao_Paulo'),
+                                    data_fim: toZonedTime(parseISO(selectedSprintData.data_fim), 'America/Sao_Paulo')
                                   });
                                 }}
                                 size="sm"

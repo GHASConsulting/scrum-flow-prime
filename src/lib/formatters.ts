@@ -9,6 +9,12 @@ export const formatDateTime = (dateString: string): string => {
   return format(zonedDate, 'dd/MM/yyyy HH:mm');
 };
 
+export const formatDate = (dateString: string): string => {
+  const date = parseISO(dateString);
+  const zonedDate = toZonedTime(date, TIMEZONE);
+  return format(zonedDate, 'dd/MM/yyyy');
+};
+
 export const statusLabels: Record<string, string> = {
   todo: 'A Fazer',
   doing: 'Fazendo',
