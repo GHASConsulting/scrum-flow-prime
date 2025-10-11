@@ -1,11 +1,19 @@
 import { useEffect, useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { getBacklog, getSprintTarefas, getSprints, initializeData } from '@/lib/storage';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { CheckCircle2, Circle, Clock, Star } from 'lucide-react';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { CheckCircle2, Circle, Clock, Star, Users } from 'lucide-react';
+import { useSprints } from '@/hooks/useSprints';
+import { useSprintTarefas } from '@/hooks/useSprintTarefas';
+import { useBacklog } from '@/hooks/useBacklog';
+import { format, differenceInDays } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
 
 const Dashboard = () => {
+  const { sprints } = useSprints();
+  const { sprintTarefas } = useSprintTarefas();
+  const { backlog } = useBacklog();
+  
   const [metrics, setMetrics] = useState({
     total: 0,
     todo: 0,
@@ -15,10 +23,11 @@ const Dashboard = () => {
     totalSP: 0
   });
 
+  const [burndownData, setBurndownData] = useState<any[]>([]);
+  const [responsibleStats, setResponsibleStats] = useState<any[]>([]);
+
   useEffect(() => {
-    initializeData();
-    
-    const backlog = getBacklog();
+    // Métricas gerais do backlog
     const total = backlog.length;
     const todo = backlog.filter(i => i.status === 'todo').length;
     const doing = backlog.filter(i => i.status === 'doing').length;
@@ -27,18 +36,75 @@ const Dashboard = () => {
     const totalSP = backlog.reduce((sum, i) => sum + i.story_points, 0);
 
     setMetrics({ total, todo, doing, done, validated, totalSP });
-  }, []);
 
-  const burndownData = [
-    { dia: 1, idealizado: 100, real: 100 },
-    { dia: 3, idealizado: 85, real: 92 },
-    { dia: 5, idealizado: 70, real: 78 },
-    { dia: 7, idealizado: 55, real: 65 },
-    { dia: 9, idealizado: 40, real: 48 },
-    { dia: 11, idealizado: 25, real: 30 },
-    { dia: 13, idealizado: 10, real: 15 },
-    { dia: 15, idealizado: 0, real: 0 },
-  ];
+    // Encontrar sprint ativa
+    const activeSprint = sprints.find(s => s.status === 'ativo');
+    
+    if (activeSprint) {
+      // Calcular burndown
+      const startDate = new Date(activeSprint.data_inicio);
+      const endDate = new Date(activeSprint.data_fim);
+      const totalDays = differenceInDays(endDate, startDate) + 1;
+      
+      // Tarefas da sprint ativa
+      const sprintTasks = sprintTarefas.filter(t => t.sprint_id === activeSprint.id);
+      const totalSprintSP = sprintTasks.reduce((sum, t) => {
+        const task = backlog.find(b => b.id === t.backlog_id);
+        return sum + (task?.story_points || 0);
+      }, 0);
+
+      // Gerar dados do burndown
+      const burndown = [];
+      for (let i = 0; i <= totalDays; i++) {
+        const currentDate = new Date(startDate);
+        currentDate.setDate(startDate.getDate() + i);
+        
+        const idealizado = totalSprintSP - (totalSprintSP / totalDays) * i;
+        
+        // Calcular pontos completados até esta data (simulado por enquanto)
+        const completedTasks = sprintTasks.filter(t => 
+          t.status === 'done' || t.status === 'validated'
+        );
+        const completedSP = completedTasks.reduce((sum, t) => {
+          const task = backlog.find(b => b.id === t.backlog_id);
+          return sum + (task?.story_points || 0);
+        }, 0);
+        const real = totalSprintSP - completedSP;
+
+        burndown.push({
+          dia: format(currentDate, 'dd/MM', { locale: ptBR }),
+          idealizado: Math.max(0, Math.round(idealizado)),
+          real: Math.max(0, Math.round(real))
+        });
+      }
+      
+      setBurndownData(burndown);
+
+      // Estatísticas por responsável
+      const responsibleMap = new Map();
+      
+      sprintTasks.forEach(t => {
+        const responsible = t.responsavel || 'Não atribuído';
+        if (!responsibleMap.has(responsible)) {
+          responsibleMap.set(responsible, {
+            name: responsible,
+            todo: 0,
+            doing: 0,
+            done: 0,
+            validated: 0
+          });
+        }
+        
+        const stats = responsibleMap.get(responsible);
+        stats[t.status]++;
+      });
+
+      setResponsibleStats(Array.from(responsibleMap.values()));
+    } else {
+      setBurndownData([]);
+      setResponsibleStats([]);
+    }
+  }, [backlog, sprints, sprintTarefas]);
 
   return (
     <Layout>
@@ -96,19 +162,85 @@ const Dashboard = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Burndown Chart</CardTitle>
+            <CardTitle>Burndown Chart - Sprint Ativa</CardTitle>
           </CardHeader>
           <CardContent>
-            <ResponsiveContainer width="100%" height={300}>
-              <LineChart data={burndownData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="dia" label={{ value: 'Dia da Sprint', position: 'insideBottom', offset: -5 }} />
-                <YAxis label={{ value: 'Story Points', angle: -90, position: 'insideLeft' }} />
-                <Tooltip />
-                <Line type="monotone" dataKey="idealizado" stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" name="Idealizado" />
-                <Line type="monotone" dataKey="real" stroke="hsl(var(--primary))" strokeWidth={2} name="Real" />
-              </LineChart>
-            </ResponsiveContainer>
+            {burndownData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <LineChart data={burndownData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="dia" label={{ value: 'Período da Sprint', position: 'insideBottom', offset: -5 }} />
+                  <YAxis label={{ value: 'Story Points', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip />
+                  <Line type="monotone" dataKey="idealizado" stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" name="Idealizado" />
+                  <Line type="monotone" dataKey="real" stroke="hsl(var(--primary))" strokeWidth={2} name="Real" />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                Nenhuma sprint ativa encontrada
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Tarefas por Responsável</CardTitle>
+            <Users className="h-5 w-5 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            {responsibleStats.length > 0 ? (
+              <>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={responsibleStats}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="name" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="todo" fill="hsl(var(--muted-foreground))" name="A Fazer" />
+                    <Bar dataKey="doing" fill="hsl(var(--warning))" name="Fazendo" />
+                    <Bar dataKey="done" fill="hsl(var(--success))" name="Feito" />
+                    <Bar dataKey="validated" fill="hsl(var(--primary))" name="Validado" />
+                  </BarChart>
+                </ResponsiveContainer>
+                
+                <div className="mt-6 space-y-4">
+                  {responsibleStats.map((stat) => (
+                    <div key={stat.name} className="space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="font-medium">{stat.name}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {stat.todo + stat.doing + stat.done + stat.validated} tarefas
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-4 gap-2 text-sm">
+                        <div className="flex items-center gap-2">
+                          <Circle className="h-3 w-3" />
+                          <span>{stat.todo} A Fazer</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Clock className="h-3 w-3 text-warning" />
+                          <span>{stat.doing} Fazendo</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <CheckCircle2 className="h-3 w-3 text-success" />
+                          <span>{stat.done} Feito</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Star className="h-3 w-3 text-primary" />
+                          <span>{stat.validated} Validado</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                Nenhuma tarefa na sprint ativa
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>
