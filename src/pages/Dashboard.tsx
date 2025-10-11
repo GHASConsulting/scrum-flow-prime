@@ -25,6 +25,7 @@ const Dashboard = () => {
 
   const [burndownData, setBurndownData] = useState<any[]>([]);
   const [responsibleStats, setResponsibleStats] = useState<any[]>([]);
+  const [totalSprintSP, setTotalSprintSP] = useState<number>(0);
 
   useEffect(() => {
     // Métricas gerais do backlog
@@ -48,10 +49,12 @@ const Dashboard = () => {
       
       // Tarefas da sprint ativa
       const sprintTasks = sprintTarefas.filter(t => t.sprint_id === activeSprint.id);
-      const totalSprintSP = sprintTasks.reduce((sum, t) => {
+      const sprintSP = sprintTasks.reduce((sum, t) => {
         const task = backlog.find(b => b.id === t.backlog_id);
         return sum + (task?.story_points || 0);
       }, 0);
+      
+      setTotalSprintSP(sprintSP);
 
       // Gerar dados do burndown
       const burndown = [];
@@ -59,7 +62,7 @@ const Dashboard = () => {
         const currentDate = new Date(startDate);
         currentDate.setDate(startDate.getDate() + i);
         
-        const idealizado = totalSprintSP - (totalSprintSP / totalDays) * i;
+        const idealizado = sprintSP - (sprintSP / totalDays) * i;
         
         // Calcular pontos completados até esta data (simulado por enquanto)
         const completedTasks = sprintTasks.filter(t => 
@@ -69,7 +72,7 @@ const Dashboard = () => {
           const task = backlog.find(b => b.id === t.backlog_id);
           return sum + (task?.story_points || 0);
         }, 0);
-        const real = totalSprintSP - completedSP;
+        const real = sprintSP - completedSP;
 
         burndown.push({
           dia: format(currentDate, 'dd/MM', { locale: ptBR }),
@@ -103,6 +106,7 @@ const Dashboard = () => {
     } else {
       setBurndownData([]);
       setResponsibleStats([]);
+      setTotalSprintSP(0);
     }
   }, [backlog, sprints, sprintTarefas]);
 
@@ -170,7 +174,10 @@ const Dashboard = () => {
                 <LineChart data={burndownData}>
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="dia" label={{ value: 'Período da Sprint', position: 'insideBottom', offset: -5 }} />
-                  <YAxis label={{ value: 'Story Points', angle: -90, position: 'insideLeft' }} />
+                  <YAxis 
+                    label={{ value: 'Story Points', angle: -90, position: 'insideLeft' }} 
+                    domain={[0, totalSprintSP]}
+                  />
                   <Tooltip />
                   <Line type="monotone" dataKey="idealizado" stroke="hsl(var(--muted-foreground))" strokeDasharray="5 5" name="Idealizado" />
                   <Line type="monotone" dataKey="real" stroke="hsl(var(--primary))" strokeWidth={2} name="Real" />
