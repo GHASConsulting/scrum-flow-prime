@@ -182,6 +182,12 @@ export default function Administracao() {
     setSubmitting(true);
 
     try {
+      console.log('Updating user:', {
+        oldEmail: editingUser.email,
+        newEmail: editFormData.email,
+        emailChanged: editFormData.email !== editingUser.email
+      });
+
       // Atualizar perfil (nome)
       const { error: profileError } = await supabase
         .from("profiles")
@@ -192,14 +198,17 @@ export default function Administracao() {
 
       if (profileError) throw profileError;
 
-      // Se o e-mail foi alterado, chamar edge function
+      // Se o e-mail ou senha foram alterados, chamar edge function
       if (editFormData.email !== editingUser.email) {
-        const { error: updateError } = await supabase.functions.invoke('update-user-email', {
+        console.log('Calling edge function to update email');
+        const { data, error: updateError } = await supabase.functions.invoke('update-user-email', {
           body: {
             userId: editingUser.user_id,
             newEmail: editFormData.email
           }
         });
+
+        console.log('Edge function response:', { data, error: updateError });
 
         if (updateError) {
           throw new Error(updateError.message || 'Erro ao atualizar e-mail');
@@ -214,11 +223,12 @@ export default function Administracao() {
 
       if (roleError) throw roleError;
 
-      toast.success("Usuário atualizado com sucesso!");
+      toast.success("Usuário atualizado com sucesso! O usuário poderá fazer login com as novas credenciais.");
       setIsEditDialogOpen(false);
       setSelectedUsers(new Set());
       fetchUsers();
     } catch (error: any) {
+      console.error('Update user error:', error);
       toast.error(error.message || "Erro ao atualizar usuário");
     } finally {
       setSubmitting(false);

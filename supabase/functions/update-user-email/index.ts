@@ -70,15 +70,17 @@ serve(async (req) => {
     if (newEmail) {
       updateData.email = newEmail;
       updateData.email_confirm = true; // Confirmar email automaticamente
+      console.log('Email will be updated and auto-confirmed');
     }
     
     if (newPassword) {
       updateData.password = newPassword;
+      console.log('Password will be updated');
     }
 
     // Atualizar no auth
     console.log('Updating user in auth:', { userId, updateData });
-    const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+    const { data: authUpdateData, error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       userId,
       updateData
     );
@@ -88,7 +90,7 @@ serve(async (req) => {
       throw updateError;
     }
     
-    console.log('User updated successfully in auth');
+    console.log('User updated successfully in auth:', authUpdateData);
 
     // Atualizar email na tabela profiles se foi alterado
     if (newEmail) {
