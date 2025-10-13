@@ -62,13 +62,14 @@ serve(async (req) => {
     }
 
     const { userId, newEmail, newPassword } = await req.json();
-    console.log('Update request:', { userId, hasEmail: !!newEmail, hasPassword: !!newPassword });
+    const normalizedEmail = newEmail ? String(newEmail).trim().toLowerCase() : undefined;
+    console.log('Update request:', { userId, hasEmail: !!normalizedEmail, hasPassword: !!newPassword });
 
     // Preparar dados para atualização
     const updateData: any = {};
     
-    if (newEmail) {
-      updateData.email = newEmail;
+    if (normalizedEmail) {
+      updateData.email = normalizedEmail;
       updateData.email_confirm = true; // Confirmar email automaticamente
       console.log('Email will be updated and auto-confirmed');
     }
@@ -93,17 +94,25 @@ serve(async (req) => {
     console.log('User updated successfully in auth:', authUpdateData);
 
     // Atualizar email na tabela profiles se foi alterado
-    if (newEmail) {
+    if (normalizedEmail) {
       const { error: profileError } = await supabaseAdmin
         .from('profiles')
-        .update({ email: newEmail })
+        .update({ email: normalizedEmail })
         .eq('user_id', userId);
 
       if (profileError) throw profileError;
     }
 
+    // Confirmar email atualizado obtendo o usuário
+    const { data: updatedUser, error: getUserError } = await supabaseAdmin.auth.admin.getUserById(userId);
+    if (getUserError) {
+      console.error('Error fetching updated user:', getUserError);
+    } else {
+      console.log('Updated user email:', updatedUser?.user?.email);
+    }
+
     return new Response(
-      JSON.stringify({ success: true }),
+      JSON.stringify({ success: true, email: updatedUser?.user?.email ?? normalizedEmail ?? null }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 

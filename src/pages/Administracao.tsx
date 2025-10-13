@@ -182,10 +182,13 @@ export default function Administracao() {
     setSubmitting(true);
 
     try {
+      const normalizedNewEmail = editFormData.email.trim().toLowerCase();
+      const normalizedOldEmail = (editingUser.email || '').trim().toLowerCase();
+
       console.log('Updating user:', {
-        oldEmail: editingUser.email,
-        newEmail: editFormData.email,
-        emailChanged: editFormData.email !== editingUser.email
+        oldEmail: normalizedOldEmail,
+        newEmail: normalizedNewEmail,
+        emailChanged: normalizedNewEmail !== normalizedOldEmail
       });
 
       // Atualizar perfil (nome)
@@ -198,13 +201,13 @@ export default function Administracao() {
 
       if (profileError) throw profileError;
 
-      // Se o e-mail ou senha foram alterados, chamar edge function
-      if (editFormData.email !== editingUser.email) {
+      // Se o e-mail foi alterado, chamar edge function
+      if (normalizedNewEmail !== normalizedOldEmail) {
         console.log('Calling edge function to update email');
         const { data, error: updateError } = await supabase.functions.invoke('update-user-email', {
           body: {
             userId: editingUser.user_id,
-            newEmail: editFormData.email
+            newEmail: normalizedNewEmail
           }
         });
 
