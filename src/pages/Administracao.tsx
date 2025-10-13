@@ -182,7 +182,7 @@ export default function Administracao() {
     setSubmitting(true);
 
     try {
-      // Atualizar perfil (nome e email local)
+      // Atualizar perfil (nome)
       const { error: profileError } = await supabase
         .from("profiles")
         .update({ 
@@ -194,26 +194,15 @@ export default function Administracao() {
 
       // Se o e-mail foi alterado, chamar edge function
       if (editFormData.email !== editingUser.email) {
-        const { data: { session } } = await supabase.auth.getSession();
-        
-        const response = await fetch(
-          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-email`,
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${session?.access_token}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              userId: editingUser.user_id,
-              newEmail: editFormData.email
-            }),
+        const { error: updateError } = await supabase.functions.invoke('update-user-email', {
+          body: {
+            userId: editingUser.user_id,
+            newEmail: editFormData.email
           }
-        );
+        });
 
-        const result = await response.json();
-        if (!response.ok) {
-          throw new Error(result.error || 'Erro ao atualizar e-mail');
+        if (updateError) {
+          throw new Error(updateError.message || 'Erro ao atualizar e-mail');
         }
       }
 
@@ -255,8 +244,11 @@ export default function Administracao() {
     setSubmitting(true);
 
     try {
-      const { error } = await supabase.auth.admin.updateUserById(userId, {
-        password: newPassword
+      const { error } = await supabase.functions.invoke('update-user-email', {
+        body: {
+          userId: userId,
+          newPassword: newPassword
+        }
       });
 
       if (error) throw error;

@@ -43,23 +43,37 @@ serve(async (req) => {
       throw new Error('Sem permissão');
     }
 
-    const { userId, newEmail } = await req.json();
+    const { userId, newEmail, newPassword } = await req.json();
 
-    // Atualizar email no auth
+    // Preparar dados para atualização
+    const updateData: any = {};
+    
+    if (newEmail) {
+      updateData.email = newEmail;
+      updateData.email_confirm = true; // Confirmar email automaticamente
+    }
+    
+    if (newPassword) {
+      updateData.password = newPassword;
+    }
+
+    // Atualizar no auth
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       userId,
-      { email: newEmail }
+      updateData
     );
 
     if (updateError) throw updateError;
 
-    // Atualizar email na tabela profiles
-    const { error: profileError } = await supabaseAdmin
-      .from('profiles')
-      .update({ email: newEmail })
-      .eq('user_id', userId);
+    // Atualizar email na tabela profiles se foi alterado
+    if (newEmail) {
+      const { error: profileError } = await supabaseAdmin
+        .from('profiles')
+        .update({ email: newEmail })
+        .eq('user_id', userId);
 
-    if (profileError) throw profileError;
+      if (profileError) throw profileError;
+    }
 
     return new Response(
       JSON.stringify({ success: true }),
