@@ -82,22 +82,10 @@ export default function Administracao() {
       return;
     }
 
-    // Buscar emails dos usuários do auth.users
-    const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
-    
-    if (authError) {
-      toast.error("Erro ao carregar dados de autenticação");
-      return;
-    }
-
-    const usersWithRoles = (profilesData || []).map((profile) => {
-      const authUser = authUsers?.find((u: any) => u.id === profile.user_id);
-      return {
-        ...profile,
-        email: authUser?.email || "",
-        user_roles: rolesData?.filter((role) => role.user_id === profile.user_id) || [],
-      };
-    });
+    const usersWithRoles = (profilesData || []).map((profile) => ({
+      ...profile,
+      user_roles: rolesData?.filter((role) => role.user_id === profile.user_id) || [],
+    }));
 
     setUsers(usersWithRoles);
   };
@@ -194,15 +182,18 @@ export default function Administracao() {
     setSubmitting(true);
 
     try {
-      // Atualizar perfil
+      // Atualizar perfil (incluindo email)
       const { error: profileError } = await supabase
         .from("profiles")
-        .update({ nome: editFormData.nome })
+        .update({ 
+          nome: editFormData.nome,
+          email: editFormData.email 
+        })
         .eq("user_id", editingUser.user_id);
 
       if (profileError) throw profileError;
 
-      // Atualizar e-mail se foi alterado
+      // Atualizar e-mail no auth se foi alterado
       if (editFormData.email !== editingUser.email) {
         const { error: emailError } = await supabase.auth.admin.updateUserById(
           editingUser.user_id,
