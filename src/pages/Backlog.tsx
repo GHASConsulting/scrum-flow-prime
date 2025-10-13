@@ -77,7 +77,7 @@ const Backlog = () => {
       <div className="space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-3xl font-bold text-foreground">Backlog</h2>
+            <h2 className="text-3xl font-bold text-foreground">Sprint</h2>
             <p className="text-muted-foreground mt-1">Tarefas das sprints organizadas por status</p>
           </div>
           <div className="flex gap-3">
