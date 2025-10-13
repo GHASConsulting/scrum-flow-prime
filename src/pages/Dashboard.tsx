@@ -118,7 +118,7 @@ const Dashboard = () => {
           <p className="text-muted-foreground mt-1">Visão geral do projeto</p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-sm font-medium">A Fazer</CardTitle>
@@ -149,6 +149,17 @@ const Dashboard = () => {
             <CardContent>
               <div className="text-2xl font-bold">{metrics.done}</div>
               <p className="text-xs text-muted-foreground">concluídas</p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between pb-2">
+              <CardTitle className="text-sm font-medium">Validado</CardTitle>
+              <Star className="h-4 w-4 text-primary" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{metrics.validated}</div>
+              <p className="text-xs text-muted-foreground">validadas</p>
             </CardContent>
           </Card>
 
