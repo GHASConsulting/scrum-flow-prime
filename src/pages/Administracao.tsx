@@ -337,7 +337,7 @@ export default function Administracao() {
                       setFormData({ ...formData, role: value })
                     }
                   >
-                    <SelectTrigger>
+                    <SelectTrigger id="role">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -367,6 +367,7 @@ export default function Administracao() {
               <div className="relative flex-1">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
+                  id="search-users"
                   placeholder="Buscar por nome..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -465,7 +466,7 @@ export default function Administracao() {
                     setEditFormData({ ...editFormData, role: value })
                   }
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id="edit-role">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
