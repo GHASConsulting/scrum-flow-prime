@@ -5,17 +5,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { getSprints, getDailiesBySprint, addDaily, initializeData } from '@/lib/storage';
-import { Sprint, Daily } from '@/types/scrum';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { MessageSquare } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAuth } from '@/hooks/useAuth';
+import { useSprints } from '@/hooks/useSprints';
+import { useDailies } from '@/hooks/useDailies';
+import { useProfiles } from '@/hooks/useProfiles';
 
 const DailyPage = () => {
-  const [sprints, setSprints] = useState<Sprint[]>([]);
+  const { user, userRole } = useAuth();
+  const { sprints } = useSprints();
+  const { dailies, addDaily: addDailyDB } = useDailies();
+  const { profiles } = useProfiles();
+  
   const [selectedSprint, setSelectedSprint] = useState<string>('');
-  const [dailies, setDailies] = useState<Daily[]>([]);
   const [formData, setFormData] = useState({
     usuario: '',
     ontem: '',
@@ -23,30 +28,32 @@ const DailyPage = () => {
     impedimentos: ''
   });
 
+  // Preencher automaticamente a sprint ativa
   useEffect(() => {
-    initializeData();
-    const loadedSprints = getSprints();
-    setSprints(loadedSprints);
-    
-    const activeSprint = loadedSprints.find(s => s.status === 'ativo');
+    const activeSprint = sprints.find(s => s.status === 'ativo');
     if (activeSprint) {
       setSelectedSprint(activeSprint.id);
-      loadDailies(activeSprint.id);
     }
-  }, []);
+  }, [sprints]);
 
+  // Preencher automaticamente o usuário para operadores
   useEffect(() => {
-    if (selectedSprint) {
-      loadDailies(selectedSprint);
+    if (userRole === 'operador' && user && profiles.length > 0) {
+      const userProfile = profiles.find(p => p.user_id === user.id);
+      if (userProfile) {
+        setFormData(prev => ({ ...prev, usuario: userProfile.nome }));
+      }
     }
-  }, [selectedSprint]);
+  }, [userRole, user, profiles]);
 
-  const loadDailies = (sprintId: string) => {
-    const loaded = getDailiesBySprint(sprintId);
-    setDailies(loaded.sort((a, b) => new Date(b.data).getTime() - new Date(a.data).getTime()));
-  };
+  // Filtrar dailies pela sprint selecionada
+  const filteredDailies = selectedSprint 
+    ? dailies.filter(d => d.sprint_id === selectedSprint).sort((a, b) => 
+        new Date(b.data).getTime() - new Date(a.data).getTime()
+      )
+    : [];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!selectedSprint) {
@@ -59,19 +66,27 @@ const DailyPage = () => {
       return;
     }
 
-    const daily: Daily = {
-      id: `daily-${Date.now()}`,
+    const { error } = await addDailyDB({
       sprint_id: selectedSprint,
       usuario: formData.usuario,
       data: new Date().toISOString(),
       ontem: formData.ontem,
       hoje: formData.hoje,
-      impedimentos: formData.impedimentos
-    };
+      impedimentos: formData.impedimentos || null
+    });
 
-    addDaily(daily);
-    setFormData({ usuario: '', ontem: '', hoje: '', impedimentos: '' });
-    loadDailies(selectedSprint);
+    if (error) {
+      toast.error('Erro ao registrar daily');
+      return;
+    }
+
+    // Limpar campos, mas manter usuário para operadores
+    if (userRole === 'operador') {
+      setFormData(prev => ({ ...prev, ontem: '', hoje: '', impedimentos: '' }));
+    } else {
+      setFormData({ usuario: '', ontem: '', hoje: '', impedimentos: '' });
+    }
+    
     toast.success('Daily registrada com sucesso');
   };
 
@@ -91,29 +106,39 @@ const DailyPage = () => {
             <CardContent>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
-                  <label className="text-sm font-medium">Sprint</label>
-                  <Select value={selectedSprint} onValueChange={setSelectedSprint}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione a sprint" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sprints.map(sprint => (
-                        <SelectItem key={sprint.id} value={sprint.id}>
-                          {sprint.nome} ({sprint.status === 'ativo' ? 'Ativa' : sprint.status})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <label className="text-sm font-medium">Sprint *</label>
+                  <Input
+                    value={sprints.find(s => s.id === selectedSprint)?.nome || ''}
+                    disabled
+                    placeholder="Sprint ativa será selecionada automaticamente"
+                  />
                 </div>
 
                 <div>
                   <label className="text-sm font-medium">Usuário *</label>
-                  <Input
-                    placeholder="Seu nome"
-                    value={formData.usuario}
-                    onChange={(e) => setFormData({ ...formData, usuario: e.target.value })}
-                    required
-                  />
+                  {userRole === 'administrador' ? (
+                    <Select 
+                      value={formData.usuario} 
+                      onValueChange={(value) => setFormData({ ...formData, usuario: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o responsável" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {profiles.map(profile => (
+                          <SelectItem key={profile.id} value={profile.nome}>
+                            {profile.nome}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Input
+                      value={formData.usuario}
+                      disabled
+                      placeholder="Seu nome será preenchido automaticamente"
+                    />
+                  )}
                 </div>
 
                 <div>
@@ -163,15 +188,15 @@ const DailyPage = () => {
             <CardContent>
               {!selectedSprint ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
-                  Selecione uma sprint para ver o histórico
+                  Aguardando sprint ativa
                 </p>
-              ) : dailies.length === 0 ? (
+              ) : filteredDailies.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-8">
                   Nenhuma daily registrada nesta sprint
                 </p>
               ) : (
                 <div className="space-y-4 max-h-[600px] overflow-y-auto">
-                  {dailies.map((daily) => (
+                  {filteredDailies.map((daily) => (
                     <div key={daily.id} className="p-4 border rounded-lg space-y-3 bg-card">
                       <div className="flex items-center justify-between">
                         <h4 className="font-semibold">{daily.usuario}</h4>

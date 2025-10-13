@@ -50,6 +50,50 @@ export type Database = {
         }
         Relationships: []
       }
+      daily: {
+        Row: {
+          created_at: string
+          data: string
+          hoje: string
+          id: string
+          impedimentos: string | null
+          ontem: string
+          sprint_id: string
+          updated_at: string
+          usuario: string
+        }
+        Insert: {
+          created_at?: string
+          data?: string
+          hoje: string
+          id?: string
+          impedimentos?: string | null
+          ontem: string
+          sprint_id: string
+          updated_at?: string
+          usuario: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          hoje?: string
+          id?: string
+          impedimentos?: string | null
+          ontem?: string
+          sprint_id?: string
+          updated_at?: string
+          usuario?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_sprint_id_fkey"
+            columns: ["sprint_id"]
+            isOneToOne: false
+            referencedRelation: "sprint"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
