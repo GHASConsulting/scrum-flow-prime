@@ -182,25 +182,39 @@ export default function Administracao() {
     setSubmitting(true);
 
     try {
-      // Atualizar perfil (incluindo email)
+      // Atualizar perfil (nome e email local)
       const { error: profileError } = await supabase
         .from("profiles")
         .update({ 
-          nome: editFormData.nome,
-          email: editFormData.email 
+          nome: editFormData.nome
         })
         .eq("user_id", editingUser.user_id);
 
       if (profileError) throw profileError;
 
-      // Atualizar e-mail no auth se foi alterado
+      // Se o e-mail foi alterado, chamar edge function
       if (editFormData.email !== editingUser.email) {
-        const { error: emailError } = await supabase.auth.admin.updateUserById(
-          editingUser.user_id,
-          { email: editFormData.email }
+        const { data: { session } } = await supabase.auth.getSession();
+        
+        const response = await fetch(
+          `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/update-user-email`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${session?.access_token}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              userId: editingUser.user_id,
+              newEmail: editFormData.email
+            }),
+          }
         );
 
-        if (emailError) throw emailError;
+        const result = await response.json();
+        if (!response.ok) {
+          throw new Error(result.error || 'Erro ao atualizar e-mail');
+        }
       }
 
       // Atualizar role
