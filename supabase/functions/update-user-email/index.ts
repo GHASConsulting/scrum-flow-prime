@@ -12,6 +12,8 @@ serve(async (req) => {
   }
 
   try {
+    console.log('Update user email function called');
+    
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '',
@@ -24,13 +26,26 @@ serve(async (req) => {
     );
 
     // Verificar autenticação
-    const authHeader = req.headers.get('Authorization')!;
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      console.error('No authorization header');
+      throw new Error('Não autenticado');
+    }
+    
     const token = authHeader.replace('Bearer ', '');
     const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
 
-    if (authError || !user) {
+    if (authError) {
+      console.error('Auth error:', authError);
       throw new Error('Não autenticado');
     }
+    
+    if (!user) {
+      console.error('No user found');
+      throw new Error('Não autenticado');
+    }
+
+    console.log('User authenticated:', user.id);
 
     // Verificar se é administrador
     const { data: roleData, error: roleError } = await supabaseAdmin
@@ -39,11 +54,15 @@ serve(async (req) => {
       .eq('user_id', user.id)
       .single();
 
+    console.log('Role check:', { roleData, roleError });
+
     if (roleError || roleData?.role !== 'administrador') {
+      console.error('Permission denied:', { roleData, roleError });
       throw new Error('Sem permissão');
     }
 
     const { userId, newEmail, newPassword } = await req.json();
+    console.log('Update request:', { userId, hasEmail: !!newEmail, hasPassword: !!newPassword });
 
     // Preparar dados para atualização
     const updateData: any = {};
@@ -58,12 +77,18 @@ serve(async (req) => {
     }
 
     // Atualizar no auth
+    console.log('Updating user in auth:', { userId, updateData });
     const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
       userId,
       updateData
     );
 
-    if (updateError) throw updateError;
+    if (updateError) {
+      console.error('Error updating user in auth:', updateError);
+      throw updateError;
+    }
+    
+    console.log('User updated successfully in auth');
 
     // Atualizar email na tabela profiles se foi alterado
     if (newEmail) {
@@ -82,6 +107,7 @@ serve(async (req) => {
 
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : 'Erro desconhecido';
+    console.error('Function error:', error);
     return new Response(
       JSON.stringify({ error: errorMessage }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
