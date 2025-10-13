@@ -52,6 +52,22 @@ export const useDailies = () => {
     }
   };
 
+  const deleteDaily = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('daily')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      await loadDailies();
+      return { error: null };
+    } catch (error) {
+      console.error('Erro ao deletar daily:', error);
+      return { error };
+    }
+  };
+
   useEffect(() => {
     loadDailies();
 
@@ -75,5 +91,5 @@ export const useDailies = () => {
     };
   }, []);
 
-  return { dailies, loading, addDaily, loadDailies };
+  return { dailies, loading, addDaily, deleteDaily, loadDailies };
 };

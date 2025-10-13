@@ -9,7 +9,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MessageSquare, CalendarIcon, Filter } from 'lucide-react';
+import { MessageSquare, CalendarIcon, Filter, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useSprints } from '@/hooks/useSprints';
@@ -20,7 +20,7 @@ import { cn } from '@/lib/utils';
 const DailyPage = () => {
   const { user, userRole } = useAuth();
   const { sprints } = useSprints();
-  const { dailies, addDaily: addDailyDB } = useDailies();
+  const { dailies, addDaily: addDailyDB, deleteDaily } = useDailies();
   const { profiles } = useProfiles();
   
   const [selectedSprint, setSelectedSprint] = useState<string>('');
@@ -59,8 +59,14 @@ const DailyPage = () => {
     ? dailies.filter(d => {
         if (d.sprint_id !== selectedSprint) return false;
         
-        // Filtro por responsável
-        if (filtroResponsavel !== 'all' && d.usuario !== filtroResponsavel) return false;
+        // Para operadores, mostrar apenas seus próprios registros
+        if (userRole === 'operador' && user && profiles.length > 0) {
+          const userProfile = profiles.find(p => p.user_id === user.id);
+          if (userProfile && d.usuario !== userProfile.nome) return false;
+        }
+        
+        // Filtro por responsável (apenas para administradores)
+        if (userRole === 'administrador' && filtroResponsavel !== 'all' && d.usuario !== filtroResponsavel) return false;
         
         // Filtro por data
         if (filtroData) {
@@ -75,10 +81,27 @@ const DailyPage = () => {
       )
     : [];
 
-  // Lista única de responsáveis para o filtro
-  const responsaveisUnicos = Array.from(new Set(
-    dailies.filter(d => d.sprint_id === selectedSprint).map(d => d.usuario)
-  ));
+  // Lista única de responsáveis para o filtro (apenas administradores)
+  const responsaveisUnicos = userRole === 'administrador' 
+    ? Array.from(new Set(
+        dailies.filter(d => d.sprint_id === selectedSprint).map(d => d.usuario)
+      ))
+    : [];
+
+  const handleDeleteDaily = async (id: string) => {
+    if (!confirm('Tem certeza que deseja excluir este registro de daily?')) {
+      return;
+    }
+
+    const { error } = await deleteDaily(id);
+
+    if (error) {
+      toast.error('Erro ao excluir daily');
+      return;
+    }
+
+    toast.success('Daily excluída com sucesso');
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -249,12 +272,15 @@ const DailyPage = () => {
             <CardHeader>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <CardTitle>Histórico de Dailies</CardTitle>
-                <div className="flex items-center gap-2">
-                  <Filter className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Filtros</span>
-                </div>
+                {userRole === 'administrador' && (
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground">Filtros</span>
+                  </div>
+                )}
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+              {userRole === 'administrador' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
                 <div>
                   <label className="text-sm font-medium">Responsável</label>
                   <Select value={filtroResponsavel} onValueChange={setFiltroResponsavel}>
@@ -310,6 +336,7 @@ const DailyPage = () => {
                   )}
                 </div>
               </div>
+              )}
             </CardHeader>
             <CardContent>
               {!selectedSprint ? (
@@ -325,10 +352,20 @@ const DailyPage = () => {
                   {filteredDailies.map((daily) => (
                     <div key={daily.id} className="p-4 border rounded-lg space-y-3 bg-card">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-semibold">{daily.usuario}</h4>
-                        <span className="text-xs text-muted-foreground">
-                          {format(parseISO(daily.data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                        </span>
+                        <div>
+                          <h4 className="font-semibold">{daily.usuario}</h4>
+                          <span className="text-xs text-muted-foreground">
+                            {format(parseISO(daily.data), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                          </span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteDaily(daily.id)}
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
 
                       <div className="space-y-2">
