@@ -64,9 +64,9 @@ const Dashboard = () => {
         
         const idealizado = sprintSP - (sprintSP / totalDays) * i;
         
-        // Calcular pontos completados até esta data (simulado por enquanto)
+        // Calcular pontos completados até esta data (excluindo validados)
         const completedTasks = sprintTasks.filter(t => 
-          t.status === 'done' || t.status === 'validated'
+          t.status === 'validated'
         );
         const completedSP = completedTasks.reduce((sum, t) => {
           const task = backlog.find(b => b.id === t.backlog_id);
