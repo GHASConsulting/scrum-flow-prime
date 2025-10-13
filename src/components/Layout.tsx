@@ -6,7 +6,7 @@ import { Button } from './ui/button';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { name: 'Backlog', href: '/backlog', icon: ListTodo },
+  { name: 'Sprint', href: '/backlog', icon: ListTodo },
   { name: 'Sprint Planning', href: '/sprint-planning', icon: Calendar },
   { name: 'Daily', href: '/daily', icon: MessageSquare },
   { name: 'Review', href: '/review', icon: Search },
