@@ -25,6 +25,7 @@ const userSchema = z.object({
 interface UserProfile {
   id: string;
   nome: string;
+  email: string;
   user_id: string;
   user_roles: {
     role: string;
@@ -38,7 +39,7 @@ export default function Administracao() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUsers, setSelectedUsers] = useState<Set<string>>(new Set());
   const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
-  const [editFormData, setEditFormData] = useState({ nome: "", role: "operador" as "administrador" | "operador" });
+  const [editFormData, setEditFormData] = useState({ nome: "", email: "", role: "operador" as "administrador" | "operador" });
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isResetPasswordDialogOpen, setIsResetPasswordDialogOpen] = useState(false);
   const [newPassword, setNewPassword] = useState("");
@@ -81,10 +82,22 @@ export default function Administracao() {
       return;
     }
 
-    const usersWithRoles = (profilesData || []).map((profile) => ({
-      ...profile,
-      user_roles: rolesData?.filter((role) => role.user_id === profile.user_id) || [],
-    }));
+    // Buscar emails dos usuários do auth.users
+    const { data: { users: authUsers }, error: authError } = await supabase.auth.admin.listUsers();
+    
+    if (authError) {
+      toast.error("Erro ao carregar dados de autenticação");
+      return;
+    }
+
+    const usersWithRoles = (profilesData || []).map((profile) => {
+      const authUser = authUsers?.find((u: any) => u.id === profile.user_id);
+      return {
+        ...profile,
+        email: authUser?.email || "",
+        user_roles: rolesData?.filter((role) => role.user_id === profile.user_id) || [],
+      };
+    });
 
     setUsers(usersWithRoles);
   };
@@ -169,6 +182,7 @@ export default function Administracao() {
       setEditingUser(userToEdit);
       setEditFormData({
         nome: userToEdit.nome,
+        email: userToEdit.email,
         role: userToEdit.user_roles?.[0]?.role as "administrador" | "operador" || "operador"
       });
       setIsEditDialogOpen(true);
@@ -187,6 +201,16 @@ export default function Administracao() {
         .eq("user_id", editingUser.user_id);
 
       if (profileError) throw profileError;
+
+      // Atualizar e-mail se foi alterado
+      if (editFormData.email !== editingUser.email) {
+        const { error: emailError } = await supabase.auth.admin.updateUserById(
+          editingUser.user_id,
+          { email: editFormData.email }
+        );
+
+        if (emailError) throw emailError;
+      }
 
       // Atualizar role
       const { error: roleError } = await supabase
@@ -425,6 +449,15 @@ export default function Administracao() {
                   id="edit-nome"
                   value={editFormData.nome}
                   onChange={(e) => setEditFormData({ ...editFormData, nome: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="edit-email">E-mail</Label>
+                <Input
+                  id="edit-email"
+                  type="email"
+                  value={editFormData.email}
+                  onChange={(e) => setEditFormData({ ...editFormData, email: e.target.value })}
                 />
               </div>
               <div className="space-y-2">
