@@ -234,7 +234,7 @@ const SprintPlanning = () => {
 
   const handleAddToSprint = async (backlogId: string) => {
     if (!selectedSprint) {
-      toast.error('Selecione uma sprint primeiro');
+      toast.error('Selecione uma sprint no agrupamento "Gerenciar Sprint" primeiro');
       return;
     }
 
@@ -278,13 +278,17 @@ const SprintPlanning = () => {
   };
 
   const getAvailableBacklog = () => {
-    if (!selectedSprint) return [];
+    // Mostra sempre todas as tarefas, exceto as validadas
+    let filteredBacklog = backlog.filter(b => b.status !== 'validated');
     
-    const tarefasNaSprint = sprintTarefas
-      .filter(st => st.sprint_id === selectedSprint)
-      .map(st => st.backlog_id);
-    
-    let filteredBacklog = backlog.filter(b => !tarefasNaSprint.includes(b.id) && b.status !== 'validated');
+    // Se houver sprint selecionada, remover tarefas que já estão nela
+    if (selectedSprint) {
+      const tarefasNaSprint = sprintTarefas
+        .filter(st => st.sprint_id === selectedSprint)
+        .map(st => st.backlog_id);
+      
+      filteredBacklog = filteredBacklog.filter(b => !tarefasNaSprint.includes(b.id));
+    }
     
     if (filtroResponsavel && filtroResponsavel !== 'all') {
       filteredBacklog = filteredBacklog.filter(b => b.responsavel === filtroResponsavel);
@@ -597,8 +601,7 @@ const SprintPlanning = () => {
           </Card>
         </div>
 
-        {selectedSprint && (
-          <Card>
+        <Card>
             <CardHeader>
               <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                 <CardTitle>RoadMap Produtos GHAS ({availableBacklog.length})</CardTitle>
@@ -796,7 +799,6 @@ const SprintPlanning = () => {
               )}
             </CardContent>
           </Card>
-        )}
       </div>
     </Layout>
   );
