@@ -5,14 +5,17 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MessageSquare } from 'lucide-react';
+import { MessageSquare, CalendarIcon, Filter } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useSprints } from '@/hooks/useSprints';
 import { useDailies } from '@/hooks/useDailies';
 import { useProfiles } from '@/hooks/useProfiles';
+import { cn } from '@/lib/utils';
 
 const DailyPage = () => {
   const { user, userRole } = useAuth();
@@ -21,12 +24,17 @@ const DailyPage = () => {
   const { profiles } = useProfiles();
   
   const [selectedSprint, setSelectedSprint] = useState<string>('');
+  const [dataRegistro, setDataRegistro] = useState<Date>(new Date());
   const [formData, setFormData] = useState({
     usuario: '',
     ontem: '',
     hoje: '',
     impedimentos: ''
   });
+
+  // Filtros do histórico
+  const [filtroResponsavel, setFiltroResponsavel] = useState<string>('all');
+  const [filtroData, setFiltroData] = useState<Date | undefined>();
 
   // Preencher automaticamente a sprint ativa
   useEffect(() => {
@@ -46,12 +54,31 @@ const DailyPage = () => {
     }
   }, [userRole, user, profiles]);
 
-  // Filtrar dailies pela sprint selecionada
+  // Filtrar dailies pela sprint selecionada e pelos filtros
   const filteredDailies = selectedSprint 
-    ? dailies.filter(d => d.sprint_id === selectedSprint).sort((a, b) => 
+    ? dailies.filter(d => {
+        if (d.sprint_id !== selectedSprint) return false;
+        
+        // Filtro por responsável
+        if (filtroResponsavel !== 'all' && d.usuario !== filtroResponsavel) return false;
+        
+        // Filtro por data
+        if (filtroData) {
+          const dailyDate = format(parseISO(d.data), 'yyyy-MM-dd');
+          const filterDate = format(filtroData, 'yyyy-MM-dd');
+          if (dailyDate !== filterDate) return false;
+        }
+        
+        return true;
+      }).sort((a, b) => 
         new Date(b.data).getTime() - new Date(a.data).getTime()
       )
     : [];
+
+  // Lista única de responsáveis para o filtro
+  const responsaveisUnicos = Array.from(new Set(
+    dailies.filter(d => d.sprint_id === selectedSprint).map(d => d.usuario)
+  ));
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,15 +88,23 @@ const DailyPage = () => {
       return;
     }
 
+    if (!dataRegistro) {
+      toast.error('Selecione a data do registro');
+      return;
+    }
+
     if (!formData.usuario.trim() || !formData.ontem.trim() || !formData.hoje.trim()) {
       toast.error('Preencha Usuário, Ontem e Hoje');
       return;
     }
 
+    // Usar a data selecionada pelo usuário
+    const dataRegistroISO = new Date(dataRegistro.setHours(new Date().getHours(), new Date().getMinutes())).toISOString();
+
     const { error } = await addDailyDB({
       sprint_id: selectedSprint,
       usuario: formData.usuario,
-      data: new Date().toISOString(),
+      data: dataRegistroISO,
       ontem: formData.ontem,
       hoje: formData.hoje,
       impedimentos: formData.impedimentos || null
@@ -80,7 +115,8 @@ const DailyPage = () => {
       return;
     }
 
-    // Limpar campos, mas manter usuário para operadores
+    // Limpar campos, mas manter usuário para operadores e resetar data para hoje
+    setDataRegistro(new Date());
     if (userRole === 'operador') {
       setFormData(prev => ({ ...prev, ontem: '', hoje: '', impedimentos: '' }));
     } else {
@@ -112,6 +148,34 @@ const DailyPage = () => {
                     disabled
                     placeholder="Sprint ativa será selecionada automaticamente"
                   />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Data do Registro *</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !dataRegistro && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {dataRegistro ? format(dataRegistro, "dd/MM/yyyy", { locale: ptBR }) : <span>Selecione a data</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={dataRegistro}
+                        onSelect={(date) => date && setDataRegistro(date)}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                        locale={ptBR}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div>
@@ -183,7 +247,69 @@ const DailyPage = () => {
 
           <Card>
             <CardHeader>
-              <CardTitle>Histórico de Dailies</CardTitle>
+              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <CardTitle>Histórico de Dailies</CardTitle>
+                <div className="flex items-center gap-2">
+                  <Filter className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">Filtros</span>
+                </div>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4">
+                <div>
+                  <label className="text-sm font-medium">Responsável</label>
+                  <Select value={filtroResponsavel} onValueChange={setFiltroResponsavel}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {responsaveisUnicos.map(resp => (
+                        <SelectItem key={resp} value={resp}>
+                          {resp}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Data do Registro</label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-normal",
+                          !filtroData && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {filtroData ? format(filtroData, "dd/MM/yyyy", { locale: ptBR }) : <span>Todas as datas</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={filtroData}
+                        onSelect={setFiltroData}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                        locale={ptBR}
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {filtroData && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setFiltroData(undefined)}
+                      className="mt-2 w-full"
+                    >
+                      Limpar filtro de data
+                    </Button>
+                  )}
+                </div>
+              </div>
             </CardHeader>
             <CardContent>
               {!selectedSprint ? (
