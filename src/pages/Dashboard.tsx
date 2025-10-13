@@ -88,6 +88,11 @@ const Dashboard = () => {
       
       sprintTasks.forEach(t => {
         const responsible = t.responsavel || 'Não atribuído';
+        
+        // Buscar o status real da tarefa no backlog
+        const backlogTask = backlog.find(b => b.id === t.backlog_id);
+        if (!backlogTask) return;
+        
         if (!responsibleMap.has(responsible)) {
           responsibleMap.set(responsible, {
             name: responsible,
@@ -99,7 +104,7 @@ const Dashboard = () => {
         }
         
         const stats = responsibleMap.get(responsible);
-        stats[t.status]++;
+        stats[backlogTask.status]++;
       });
 
       setResponsibleStats(Array.from(responsibleMap.values()));
