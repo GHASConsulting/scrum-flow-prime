@@ -121,6 +121,47 @@ export type Database = {
         }
         Relationships: []
       }
+      retrospectiva: {
+        Row: {
+          acoes: string[]
+          bom: string[]
+          created_at: string
+          data: string
+          id: string
+          melhorar: string[]
+          sprint_id: string
+          updated_at: string
+        }
+        Insert: {
+          acoes?: string[]
+          bom?: string[]
+          created_at?: string
+          data?: string
+          id?: string
+          melhorar?: string[]
+          sprint_id: string
+          updated_at?: string
+        }
+        Update: {
+          acoes?: string[]
+          bom?: string[]
+          created_at?: string
+          data?: string
+          id?: string
+          melhorar?: string[]
+          sprint_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "retrospectiva_sprint_id_fkey"
+            columns: ["sprint_id"]
+            isOneToOne: false
+            referencedRelation: "sprint"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sprint: {
         Row: {
           created_at: string

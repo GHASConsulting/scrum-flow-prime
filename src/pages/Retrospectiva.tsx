@@ -3,22 +3,18 @@ import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { 
-  getSprints, 
-  getRetrospectivaBySprint,
-  addRetrospectiva,
-  initializeData 
-} from '@/lib/storage';
-import { Sprint, Retrospectiva } from '@/types/scrum';
+import { Input } from '@/components/ui/input';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CheckCircle, AlertTriangle, Rocket, Plus, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { Input } from '@/components/ui/input';
+import { useSprints } from '@/hooks/useSprints';
+import { useRetrospectivas, Retrospectiva } from '@/hooks/useRetrospectivas';
 
 const RetrospectivaPage = () => {
-  const [sprints, setSprints] = useState<Sprint[]>([]);
+  const { sprints } = useSprints();
+  const { addRetrospectiva: addRetrospectivaDB, getRetrospectivaBySprint } = useRetrospectivas();
+  
   const [selectedSprint, setSelectedSprint] = useState<string>('');
   const [retrospectiva, setRetrospectiva] = useState<Retrospectiva | null>(null);
   const [formData, setFormData] = useState({
@@ -27,23 +23,14 @@ const RetrospectivaPage = () => {
     acoes: ['']
   });
 
+  // Preencher automaticamente a sprint ativa
   useEffect(() => {
-    initializeData();
-    const loadedSprints = getSprints();
-    setSprints(loadedSprints);
-    
-    const activeSprint = loadedSprints.find(s => s.status === 'ativo');
+    const activeSprint = sprints.find(s => s.status === 'ativo');
     if (activeSprint) {
       setSelectedSprint(activeSprint.id);
       loadRetrospectiva(activeSprint.id);
     }
-  }, []);
-
-  useEffect(() => {
-    if (selectedSprint) {
-      loadRetrospectiva(selectedSprint);
-    }
-  }, [selectedSprint]);
+  }, [sprints]);
 
   const loadRetrospectiva = (sprintId: string) => {
     const existing = getRetrospectivaBySprint(sprintId);
@@ -84,7 +71,7 @@ const RetrospectivaPage = () => {
     });
   };
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!selectedSprint) {
       toast.error('Selecione uma sprint');
       return;
@@ -99,17 +86,22 @@ const RetrospectivaPage = () => {
       return;
     }
 
-    const newRetrospectiva: Retrospectiva = {
-      id: `retro-${Date.now()}`,
+    const { data, error } = await addRetrospectivaDB({
       sprint_id: selectedSprint,
       bom: bomFiltrado,
       melhorar: melhorarFiltrado,
       acoes: acoesFiltrado,
       data: new Date().toISOString()
-    };
+    });
 
-    addRetrospectiva(newRetrospectiva);
-    setRetrospectiva(newRetrospectiva);
+    if (error) {
+      toast.error('Erro ao salvar retrospectiva');
+      return;
+    }
+
+    if (data) {
+      setRetrospectiva(data);
+    }
     toast.success('Retrospectiva salva com sucesso');
   };
 
@@ -134,19 +126,12 @@ const RetrospectivaPage = () => {
           </CardHeader>
           <CardContent className="space-y-4">
             <div>
-              <label className="text-sm font-medium">Sprint</label>
-              <Select value={selectedSprint} onValueChange={setSelectedSprint}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione a sprint" />
-                </SelectTrigger>
-                <SelectContent>
-                  {sprints.map(sprint => (
-                    <SelectItem key={sprint.id} value={sprint.id}>
-                      {sprint.nome} ({sprint.status === 'ativo' ? 'Ativa' : sprint.status})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <label className="text-sm font-medium">Sprint *</label>
+              <Input
+                value={sprints.find(s => s.id === selectedSprint)?.nome || ''}
+                disabled
+                placeholder="Sprint ativa será selecionada automaticamente"
+              />
             </div>
           </CardContent>
         </Card>
