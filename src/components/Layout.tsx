@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, ListTodo, Calendar, MessageSquare, Search, RotateCcw, Shield, LogOut } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Calendar, MessageSquare, RotateCcw, Shield, LogOut } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from './ui/button';
 
@@ -9,7 +9,6 @@ const navigation = [
   { name: 'Sprint', href: '/backlog', icon: ListTodo },
   { name: 'Sprint Planning', href: '/sprint-planning', icon: Calendar },
   { name: 'Daily', href: '/daily', icon: MessageSquare },
-  { name: 'Review', href: '/review', icon: Search },
   { name: 'Retrospectiva', href: '/retrospectiva', icon: RotateCcw },
 ];
 
