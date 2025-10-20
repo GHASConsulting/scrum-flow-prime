@@ -9,6 +9,7 @@ import Backlog from "./pages/Backlog";
 import SprintPlanning from "./pages/SprintPlanning";
 import Daily from "./pages/Daily";
 import Retrospectiva from "./pages/Retrospectiva";
+import Projetos from "./pages/Projetos";
 import Auth from "./pages/Auth";
 import Administracao from "./pages/Administracao";
 import NotFound from "./pages/NotFound";
@@ -27,6 +28,7 @@ const App = () => (
         <Route path="/sprint-planning" element={<ProtectedRoute><SprintPlanning /></ProtectedRoute>} />
         <Route path="/daily" element={<ProtectedRoute><Daily /></ProtectedRoute>} />
         <Route path="/retrospectiva" element={<ProtectedRoute><Retrospectiva /></ProtectedRoute>} />
+        <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
         <Route path="/administracao" element={<ProtectedRoute><Administracao /></ProtectedRoute>} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />

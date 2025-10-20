@@ -121,6 +121,60 @@ export type Database = {
         }
         Relationships: []
       }
+      project: {
+        Row: {
+          created_at: string
+          data_fim: string | null
+          data_inicio: string | null
+          descricao: string | null
+          id: string
+          nome: string
+          status: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          id?: string
+          nome: string
+          status?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          data_fim?: string | null
+          data_inicio?: string | null
+          descricao?: string | null
+          id?: string
+          nome?: string
+          status?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      resource: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          type: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          type?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          type?: string | null
+        }
+        Relationships: []
+      }
       retrospectiva: {
         Row: {
           acoes: string[]
@@ -158,6 +212,156 @@ export type Database = {
             columns: ["sprint_id"]
             isOneToOne: false
             referencedRelation: "sprint"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_assignment: {
+        Row: {
+          allocation_pct: number | null
+          created_at: string
+          id: string
+          resource_id: string
+          role: string | null
+          task_id: string
+        }
+        Insert: {
+          allocation_pct?: number | null
+          created_at?: string
+          id?: string
+          resource_id: string
+          role?: string | null
+          task_id: string
+        }
+        Update: {
+          allocation_pct?: number | null
+          created_at?: string
+          id?: string
+          resource_id?: string
+          role?: string | null
+          task_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_assignment_resource_id_fkey"
+            columns: ["resource_id"]
+            isOneToOne: false
+            referencedRelation: "resource"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_assignment_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_task"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_dependency: {
+        Row: {
+          created_at: string
+          id: string
+          lag_hours: number
+          predecessor_id: string
+          successor_id: string
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          lag_hours?: number
+          predecessor_id: string
+          successor_id: string
+          type?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          lag_hours?: number
+          predecessor_id?: string
+          successor_id?: string
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_dependency_predecessor_id_fkey"
+            columns: ["predecessor_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_task"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_dependency_successor_id_fkey"
+            columns: ["successor_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_task"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      schedule_task: {
+        Row: {
+          created_at: string
+          duration_days: number | null
+          duration_is_estimate: boolean
+          end_at: string | null
+          id: string
+          is_summary: boolean
+          name: string
+          notes: string | null
+          order_index: number
+          parent_id: string | null
+          predecessors: string | null
+          project_id: string
+          start_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          duration_days?: number | null
+          duration_is_estimate?: boolean
+          end_at?: string | null
+          id?: string
+          is_summary?: boolean
+          name: string
+          notes?: string | null
+          order_index?: number
+          parent_id?: string | null
+          predecessors?: string | null
+          project_id: string
+          start_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          duration_days?: number | null
+          duration_is_estimate?: boolean
+          end_at?: string | null
+          id?: string
+          is_summary?: boolean
+          name?: string
+          notes?: string | null
+          order_index?: number
+          parent_id?: string | null
+          predecessors?: string | null
+          project_id?: string
+          start_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "schedule_task_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "schedule_task"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "schedule_task_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "project"
             referencedColumns: ["id"]
           },
         ]
