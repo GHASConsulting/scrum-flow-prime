@@ -314,6 +314,7 @@ export type Database = {
           parent_id: string | null
           predecessors: string | null
           project_id: string
+          responsavel: string | null
           start_at: string | null
           updated_at: string
         }
@@ -330,6 +331,7 @@ export type Database = {
           parent_id?: string | null
           predecessors?: string | null
           project_id: string
+          responsavel?: string | null
           start_at?: string | null
           updated_at?: string
         }
@@ -346,6 +348,7 @@ export type Database = {
           parent_id?: string | null
           predecessors?: string | null
           project_id?: string
+          responsavel?: string | null
           start_at?: string | null
           updated_at?: string
         }

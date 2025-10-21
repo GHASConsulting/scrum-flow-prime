@@ -9,6 +9,8 @@ import type { Tables } from '@/integrations/supabase/types';
 import { formatDateTimeForInput, parseDateTimeFromInput, addWorkingDays, calculateWorkingDays, adjustToWorkingTime } from '@/lib/workingDays';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { toast } from 'sonner';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 type ScheduleTask = Tables<'schedule_task'>;
 
@@ -49,9 +51,72 @@ export function CronogramaTreeGrid({ projectId }: CronogramaTreeGridProps) {
         predecessors: null,
         parent_id: null,
         notes: null,
+        responsavel: null,
       });
     } catch (error) {
       console.error('Erro ao adicionar tarefa:', error);
+    }
+  };
+
+  const handleExportPDF = () => {
+    try {
+      const doc = new jsPDF('landscape', 'mm', 'a4');
+      
+      // Adicionar título
+      doc.setFontSize(16);
+      doc.text('Cronograma do Projeto', 14, 15);
+      
+      // Preparar dados para a tabela
+      const tableData = tasks.map(task => {
+        const indent = task.parent_id ? '  ' : '';
+        return [
+          indent + task.name,
+          task.duration_days ? task.duration_days.toString() : '',
+          task.start_at ? new Date(task.start_at).toLocaleString('pt-BR') : '',
+          task.end_at ? new Date(task.end_at).toLocaleString('pt-BR') : '',
+          task.predecessors || '',
+          task.responsavel || ''
+        ];
+      });
+
+      // Gerar tabela
+      autoTable(doc, {
+        head: [['Nome', 'Duração (dias)', 'Início', 'Fim', 'Antecessores', 'Responsável']],
+        body: tableData,
+        startY: 25,
+        styles: {
+          fontSize: 8,
+          cellPadding: 2,
+        },
+        headStyles: {
+          fillColor: [66, 66, 66],
+          textColor: 255,
+          fontStyle: 'bold',
+        },
+        columnStyles: {
+          0: { cellWidth: 60 },
+          1: { cellWidth: 30, halign: 'right' },
+          2: { cellWidth: 40 },
+          3: { cellWidth: 40 },
+          4: { cellWidth: 40 },
+          5: { cellWidth: 50 },
+        },
+        didParseCell: (data) => {
+          // Negrito para linhas de resumo
+          const task = tasks[data.row.index];
+          if (task?.is_summary && data.section === 'body') {
+            data.cell.styles.fontStyle = 'bold';
+            data.cell.styles.fillColor = [240, 240, 240];
+          }
+        },
+      });
+
+      // Salvar PDF
+      doc.save(`cronograma-${new Date().toLocaleDateString('pt-BR')}.pdf`);
+      toast.success('PDF exportado com sucesso!');
+    } catch (error) {
+      console.error('Erro ao exportar PDF:', error);
+      toast.error('Erro ao exportar PDF');
     }
   };
 
@@ -194,6 +259,14 @@ export function CronogramaTreeGrid({ projectId }: CronogramaTreeGridProps) {
             />
           </TableCell>
           <TableCell>
+            <Input
+              value={task.responsavel || ''}
+              onChange={(e) => handleUpdateField(task.id, 'responsavel', e.target.value)}
+              className="h-8"
+              placeholder="Nome do responsável"
+            />
+          </TableCell>
+          <TableCell>
             <div className="flex gap-2">
               <Button
                 variant="ghost"
@@ -243,7 +316,7 @@ export function CronogramaTreeGrid({ projectId }: CronogramaTreeGridProps) {
               <Plus className="mr-2 h-4 w-4" />
               Adicionar Tarefa
             </Button>
-            <Button variant="outline">
+            <Button variant="outline" onClick={handleExportPDF}>
               <FileDown className="mr-2 h-4 w-4" />
               Exportar PDF
             </Button>
@@ -259,13 +332,14 @@ export function CronogramaTreeGrid({ projectId }: CronogramaTreeGridProps) {
                 <TableHead className="w-[200px]">Início</TableHead>
                 <TableHead className="w-[200px]">Fim</TableHead>
                 <TableHead className="w-[200px]">Antecessores</TableHead>
+                <TableHead className="w-[180px]">Responsável</TableHead>
                 <TableHead className="w-[150px]">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {tree.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center text-muted-foreground">
                     Nenhuma tarefa encontrada. Adicione uma nova tarefa para começar.
                   </TableCell>
                 </TableRow>
