@@ -7,6 +7,7 @@ import Dashboard from "./pages/Dashboard";
 import Backlog from "./pages/Backlog";
 import SprintPlanning from "./pages/SprintPlanning";
 import Daily from "./pages/Daily";
+import HistoricoDaily from "./pages/HistoricoDaily";
 import Retrospectiva from "./pages/Retrospectiva";
 import Projetos from "./pages/Projetos";
 import Auth from "./pages/Auth";
@@ -27,6 +28,7 @@ function App() {
           <Route path="/backlog" element={<ProtectedRoute><Backlog /></ProtectedRoute>} />
           <Route path="/sprint-planning" element={<ProtectedRoute><SprintPlanning /></ProtectedRoute>} />
           <Route path="/daily" element={<ProtectedRoute><Daily /></ProtectedRoute>} />
+          <Route path="/daily/historico" element={<ProtectedRoute><HistoricoDaily /></ProtectedRoute>} />
           <Route path="/retrospectiva" element={<ProtectedRoute><Retrospectiva /></ProtectedRoute>} />
           <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
           <Route path="/administracao" element={<ProtectedRoute><Administracao /></ProtectedRoute>} />

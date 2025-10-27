@@ -7,17 +7,20 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { MessageSquare, CalendarIcon, Filter, Trash2 } from 'lucide-react';
+import { MessageSquare, CalendarIcon, Filter, Trash2, History } from 'lucide-react';
 import { toast } from 'sonner';
 import { useAuth } from '@/hooks/useAuth';
 import { useSprints } from '@/hooks/useSprints';
 import { useDailies } from '@/hooks/useDailies';
 import { useProfiles } from '@/hooks/useProfiles';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 const DailyPage = () => {
+  const navigate = useNavigate();
   const { user, userRole } = useAuth();
   const { sprints } = useSprints();
   const { dailies, addDaily: addDailyDB, deleteDaily } = useDailies();
@@ -152,9 +155,19 @@ const DailyPage = () => {
   return (
     <Layout>
       <div className="space-y-6">
-        <div>
-          <h2 className="text-3xl font-bold text-foreground">Daily</h2>
-          <p className="text-muted-foreground mt-1">Registre o acompanhamento diário do time</p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-3xl font-bold text-foreground">Daily</h2>
+            <p className="text-muted-foreground mt-1">Registre o acompanhamento diário do time</p>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => navigate('/daily/historico')}
+            className="gap-2"
+          >
+            <History className="h-4 w-4" />
+            Ver Histórico
+          </Button>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
