@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
-import { CheckCircle2, Circle, Clock, Star, Users } from 'lucide-react';
+import { CheckCircle2, Circle, Clock, Star, Users, Filter } from 'lucide-react';
 import { useSprints } from '@/hooks/useSprints';
 import { useSprintTarefas } from '@/hooks/useSprintTarefas';
 import { useBacklog } from '@/hooks/useBacklog';
-import { format, differenceInDays } from 'date-fns';
+import { format, differenceInDays, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 
 const Dashboard = () => {
@@ -14,6 +15,7 @@ const Dashboard = () => {
   const { sprintTarefas } = useSprintTarefas();
   const { backlog } = useBacklog();
   
+  const [selectedSprint, setSelectedSprint] = useState<string>('');
   const [metrics, setMetrics] = useState({
     total: 0,
     todo: 0,
@@ -27,34 +29,51 @@ const Dashboard = () => {
   const [responsibleStats, setResponsibleStats] = useState<any[]>([]);
   const [totalSprintSP, setTotalSprintSP] = useState<number>(0);
 
+  // Selecionar automaticamente a sprint ativa ao carregar
   useEffect(() => {
-    // Métricas gerais do backlog
-    const total = backlog.length;
-    const todo = backlog.filter(i => i.status === 'todo').length;
-    const doing = backlog.filter(i => i.status === 'doing').length;
-    const done = backlog.filter(i => i.status === 'done').length;
-    const validated = backlog.filter(i => i.status === 'validated').length;
-    const totalSP = backlog.reduce((sum, i) => sum + i.story_points, 0);
-
-    setMetrics({ total, todo, doing, done, validated, totalSP });
-
-    // Encontrar sprint ativa
     const activeSprint = sprints.find(s => s.status === 'ativo');
+    if (activeSprint && !selectedSprint) {
+      setSelectedSprint(activeSprint.id);
+    }
+  }, [sprints]);
+
+  useEffect(() => {
+    if (!selectedSprint) {
+      setMetrics({ total: 0, todo: 0, doing: 0, done: 0, validated: 0, totalSP: 0 });
+      setBurndownData([]);
+      setResponsibleStats([]);
+      setTotalSprintSP(0);
+      return;
+    }
+
+    const sprint = sprints.find(s => s.id === selectedSprint);
     
-    if (activeSprint) {
+    if (sprint) {
       // Calcular burndown
-      const startDate = new Date(activeSprint.data_inicio);
-      const endDate = new Date(activeSprint.data_fim);
+      const startDate = new Date(sprint.data_inicio);
+      const endDate = new Date(sprint.data_fim);
       const totalDays = differenceInDays(endDate, startDate) + 1;
       
-      // Tarefas da sprint ativa
-      const sprintTasks = sprintTarefas.filter(t => t.sprint_id === activeSprint.id);
+      // Tarefas da sprint selecionada
+      const sprintTasks = sprintTarefas.filter(t => t.sprint_id === sprint.id);
       const sprintSP = sprintTasks.reduce((sum, t) => {
         const task = backlog.find(b => b.id === t.backlog_id);
         return sum + (task?.story_points || 0);
       }, 0);
       
       setTotalSprintSP(sprintSP);
+
+      // Métricas da sprint selecionada
+      const sprintBacklogIds = sprintTasks.map(t => t.backlog_id);
+      const sprintBacklogItems = backlog.filter(b => sprintBacklogIds.includes(b.id));
+      
+      const total = sprintBacklogItems.length;
+      const todo = sprintBacklogItems.filter(i => i.status === 'todo').length;
+      const doing = sprintBacklogItems.filter(i => i.status === 'doing').length;
+      const done = sprintBacklogItems.filter(i => i.status === 'done').length;
+      const validated = sprintBacklogItems.filter(i => i.status === 'validated').length;
+
+      setMetrics({ total, todo, doing, done, validated, totalSP: sprintSP });
 
       // Gerar dados do burndown
       const burndown = [];
@@ -110,12 +129,8 @@ const Dashboard = () => {
       });
 
       setResponsibleStats(Array.from(responsibleMap.values()));
-    } else {
-      setBurndownData([]);
-      setResponsibleStats([]);
-      setTotalSprintSP(0);
     }
-  }, [backlog, sprints, sprintTarefas]);
+  }, [backlog, sprints, sprintTarefas, selectedSprint]);
 
   return (
     <Layout>
@@ -124,6 +139,32 @@ const Dashboard = () => {
           <h2 className="text-3xl font-bold text-foreground">Dashboard</h2>
           <p className="text-muted-foreground mt-1">Visão geral do projeto</p>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Filter className="h-5 w-5" />
+              Filtros
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div>
+              <label className="text-sm font-medium">Sprint *</label>
+              <Select value={selectedSprint} onValueChange={setSelectedSprint}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma sprint" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sprints.map((sprint) => (
+                    <SelectItem key={sprint.id} value={sprint.id}>
+                      {sprint.nome} ({format(parseISO(sprint.data_inicio), 'dd/MM/yyyy', { locale: ptBR })} - {format(parseISO(sprint.data_fim), 'dd/MM/yyyy', { locale: ptBR })}) - {sprint.status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
           <Card>
@@ -177,14 +218,14 @@ const Dashboard = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{metrics.totalSP}</div>
-              <p className="text-xs text-muted-foreground">total do backlog</p>
+              <p className="text-xs text-muted-foreground">total da sprint</p>
             </CardContent>
           </Card>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Burndown Chart - Sprint Ativa</CardTitle>
+            <CardTitle>Burndown Chart</CardTitle>
           </CardHeader>
           <CardContent>
             {burndownData.length > 0 ? (
@@ -203,7 +244,7 @@ const Dashboard = () => {
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                Nenhuma sprint ativa encontrada
+                Selecione uma sprint para visualizar o burndown
               </div>
             )}
           </CardContent>
@@ -263,7 +304,7 @@ const Dashboard = () => {
               </>
             ) : (
               <div className="flex items-center justify-center h-[300px] text-muted-foreground">
-                Nenhuma tarefa na sprint ativa
+                Selecione uma sprint para visualizar as tarefas por responsável
               </div>
             )}
           </CardContent>
