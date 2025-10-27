@@ -3,7 +3,7 @@ import { Layout } from '@/components/Layout';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { CheckCircle, AlertTriangle, Rocket, Plus, X } from 'lucide-react';
@@ -23,14 +23,20 @@ const RetrospectivaPage = () => {
     acoes: ['']
   });
 
-  // Preencher automaticamente a sprint ativa
+  // Preencher automaticamente a sprint ativa ao carregar
   useEffect(() => {
     const activeSprint = sprints.find(s => s.status === 'ativo');
-    if (activeSprint) {
+    if (activeSprint && !selectedSprint) {
       setSelectedSprint(activeSprint.id);
       loadRetrospectiva(activeSprint.id);
     }
   }, [sprints]);
+
+  // Carregar retrospectiva quando o sprint selecionado mudar
+  const handleSprintChange = (sprintId: string) => {
+    setSelectedSprint(sprintId);
+    loadRetrospectiva(sprintId);
+  };
 
   const loadRetrospectiva = (sprintId: string) => {
     const existing = getRetrospectivaBySprint(sprintId);
@@ -127,11 +133,18 @@ const RetrospectivaPage = () => {
           <CardContent className="space-y-4">
             <div>
               <label className="text-sm font-medium">Sprint *</label>
-              <Input
-                value={sprints.find(s => s.id === selectedSprint)?.nome || ''}
-                disabled
-                placeholder="Sprint ativa será selecionada automaticamente"
-              />
+              <Select value={selectedSprint} onValueChange={handleSprintChange}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione uma sprint" />
+                </SelectTrigger>
+                <SelectContent>
+                  {sprints.map((sprint) => (
+                    <SelectItem key={sprint.id} value={sprint.id}>
+                      {sprint.nome} ({format(parseISO(sprint.data_inicio), 'dd/MM/yyyy', { locale: ptBR })} - {format(parseISO(sprint.data_fim), 'dd/MM/yyyy', { locale: ptBR })})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
