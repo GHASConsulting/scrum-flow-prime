@@ -6,10 +6,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CheckCircle, AlertTriangle, Rocket, Plus, X } from 'lucide-react';
+import { CheckCircle, AlertTriangle, Rocket, Plus, X, FileDown } from 'lucide-react';
 import { toast } from 'sonner';
 import { useSprints } from '@/hooks/useSprints';
 import { useRetrospectivas, Retrospectiva } from '@/hooks/useRetrospectivas';
+import jsPDF from 'jspdf';
 
 const RetrospectivaPage = () => {
   const { sprints } = useSprints();
@@ -109,6 +110,132 @@ const RetrospectivaPage = () => {
       setRetrospectiva(data);
     }
     toast.success('Retrospectiva salva com sucesso');
+  };
+
+  const handleExportPDF = () => {
+    if (!selectedSprint) {
+      toast.error('Selecione uma sprint');
+      return;
+    }
+
+    const sprint = sprints.find(s => s.id === selectedSprint);
+    if (!sprint) return;
+
+    const bomFiltrado = formData.bom.filter(item => item.trim() !== '');
+    const melhorarFiltrado = formData.melhorar.filter(item => item.trim() !== '');
+    const acoesFiltrado = formData.acoes.filter(item => item.trim() !== '');
+
+    if (bomFiltrado.length === 0 && melhorarFiltrado.length === 0 && acoesFiltrado.length === 0) {
+      toast.error('Não há dados para exportar');
+      return;
+    }
+
+    const doc = new jsPDF();
+    let yPosition = 20;
+
+    // Título
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Retrospectiva', 20, yPosition);
+    yPosition += 10;
+
+    // Nome da Sprint
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Sprint: ${sprint.nome}`, 20, yPosition);
+    yPosition += 5;
+    doc.text(`Período: ${format(parseISO(sprint.data_inicio), 'dd/MM/yyyy', { locale: ptBR })} - ${format(parseISO(sprint.data_fim), 'dd/MM/yyyy', { locale: ptBR })}`, 20, yPosition);
+    yPosition += 15;
+
+    // O que foi bom
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('O que foi bom:', 20, yPosition);
+    yPosition += 8;
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    if (bomFiltrado.length > 0) {
+      bomFiltrado.forEach((item, index) => {
+        const lines = doc.splitTextToSize(`${index + 1}. ${item}`, 170);
+        lines.forEach((line: string) => {
+          if (yPosition > 270) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          doc.text(line, 25, yPosition);
+          yPosition += 6;
+        });
+      });
+    } else {
+      doc.text('- Nenhum item registrado', 25, yPosition);
+      yPosition += 6;
+    }
+    yPosition += 8;
+
+    // O que pode melhorar
+    if (yPosition > 250) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('O que pode melhorar:', 20, yPosition);
+    yPosition += 8;
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    if (melhorarFiltrado.length > 0) {
+      melhorarFiltrado.forEach((item, index) => {
+        const lines = doc.splitTextToSize(`${index + 1}. ${item}`, 170);
+        lines.forEach((line: string) => {
+          if (yPosition > 270) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          doc.text(line, 25, yPosition);
+          yPosition += 6;
+        });
+      });
+    } else {
+      doc.text('- Nenhum item registrado', 25, yPosition);
+      yPosition += 6;
+    }
+    yPosition += 8;
+
+    // Ações
+    if (yPosition > 250) {
+      doc.addPage();
+      yPosition = 20;
+    }
+    doc.setFontSize(14);
+    doc.setFont('helvetica', 'bold');
+    doc.text('Ações:', 20, yPosition);
+    yPosition += 8;
+    
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'normal');
+    if (acoesFiltrado.length > 0) {
+      acoesFiltrado.forEach((item, index) => {
+        const lines = doc.splitTextToSize(`${index + 1}. ${item}`, 170);
+        lines.forEach((line: string) => {
+          if (yPosition > 270) {
+            doc.addPage();
+            yPosition = 20;
+          }
+          doc.text(line, 25, yPosition);
+          yPosition += 6;
+        });
+      });
+    } else {
+      doc.text('- Nenhum item registrado', 25, yPosition);
+      yPosition += 6;
+    }
+
+    // Salvar PDF
+    const fileName = `retrospectiva-${sprint.nome.replace(/\s+/g, '-').toLowerCase()}.pdf`;
+    doc.save(fileName);
+    toast.success('PDF exportado com sucesso');
   };
 
   return (
@@ -277,9 +404,13 @@ const RetrospectivaPage = () => {
           </Card>
         </div>
 
-        <div className="flex justify-center">
+        <div className="flex justify-center gap-4">
           <Button onClick={handleSave} size="lg" className="px-8">
             Salvar Retrospectiva
+          </Button>
+          <Button onClick={handleExportPDF} size="lg" variant="outline" className="px-8">
+            <FileDown className="h-5 w-5 mr-2" />
+            Exportar PDF
           </Button>
         </div>
       </div>
