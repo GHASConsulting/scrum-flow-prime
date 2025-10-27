@@ -50,6 +50,78 @@ export type Database = {
         }
         Relationships: []
       }
+      client_access_records: {
+        Row: {
+          app_nome: string | null
+          app_senha: string | null
+          app_usuario: string | null
+          bd_senha: string | null
+          bd_tns: string | null
+          bd_usuario: string | null
+          cliente: string
+          created_at: string
+          docker_senha: string | null
+          docker_so: string | null
+          docker_usuario: string | null
+          id: string
+          servidor_senha: string | null
+          servidor_so: string | null
+          servidor_usuario: string | null
+          updated_at: string
+          vpn_executavel_path: string | null
+          vpn_ip_servidor: string | null
+          vpn_nome: string | null
+          vpn_senha: string | null
+          vpn_usuario: string | null
+        }
+        Insert: {
+          app_nome?: string | null
+          app_senha?: string | null
+          app_usuario?: string | null
+          bd_senha?: string | null
+          bd_tns?: string | null
+          bd_usuario?: string | null
+          cliente: string
+          created_at?: string
+          docker_senha?: string | null
+          docker_so?: string | null
+          docker_usuario?: string | null
+          id?: string
+          servidor_senha?: string | null
+          servidor_so?: string | null
+          servidor_usuario?: string | null
+          updated_at?: string
+          vpn_executavel_path?: string | null
+          vpn_ip_servidor?: string | null
+          vpn_nome?: string | null
+          vpn_senha?: string | null
+          vpn_usuario?: string | null
+        }
+        Update: {
+          app_nome?: string | null
+          app_senha?: string | null
+          app_usuario?: string | null
+          bd_senha?: string | null
+          bd_tns?: string | null
+          bd_usuario?: string | null
+          cliente?: string
+          created_at?: string
+          docker_senha?: string | null
+          docker_so?: string | null
+          docker_usuario?: string | null
+          id?: string
+          servidor_senha?: string | null
+          servidor_so?: string | null
+          servidor_usuario?: string | null
+          updated_at?: string
+          vpn_executavel_path?: string | null
+          vpn_ip_servidor?: string | null
+          vpn_nome?: string | null
+          vpn_senha?: string | null
+          vpn_usuario?: string | null
+        }
+        Relationships: []
+      }
       daily: {
         Row: {
           created_at: string
