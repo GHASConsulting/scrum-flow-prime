@@ -47,15 +47,15 @@ const DailyPage = () => {
     }
   }, [sprints]);
 
-  // Preencher automaticamente o usuário para operadores
+  // Preencher automaticamente o usuário logado
   useEffect(() => {
-    if (userRole === 'operador' && user && profiles.length > 0) {
+    if (user && profiles.length > 0) {
       const userProfile = profiles.find(p => p.user_id === user.id);
       if (userProfile) {
         setFormData(prev => ({ ...prev, usuario: userProfile.nome }));
       }
     }
-  }, [userRole, user, profiles]);
+  }, [user, profiles]);
 
   // Filtrar dailies pela sprint selecionada e pelos filtros
   const filteredDailies = selectedSprint 
