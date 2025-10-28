@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { LayoutDashboard, ListTodo, Calendar, MessageSquare, RotateCcw, Shield, LogOut, FolderKanban, KeyRound } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from './ui/button';
+import logoGhas from '@/assets/logo-ghas.png';
 
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -24,7 +25,10 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             <div className="flex items-center gap-8">
-              <h1 className="text-xl font-bold text-foreground">SCRUM Manager</h1>
+              <div className="flex items-center gap-3">
+                <img src={logoGhas} alt="GHAS Logo" className="h-10 w-auto" />
+                <h1 className="text-xl font-bold text-foreground">SCRUM GHAS</h1>
+              </div>
               <div className="flex gap-1">
                 {navigation.map((item) => {
                   const Icon = item.icon;
