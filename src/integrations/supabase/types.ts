@@ -52,21 +52,191 @@ export type Database = {
       }
       client_access_records: {
         Row: {
+          cliente: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          cliente: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          cliente?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      client_app_access: {
+        Row: {
           app_nome: string | null
           app_senha: string | null
           app_usuario: string | null
+          client_record_id: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          app_nome?: string | null
+          app_senha?: string | null
+          app_usuario?: string | null
+          client_record_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          app_nome?: string | null
+          app_senha?: string | null
+          app_usuario?: string | null
+          client_record_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_app_access_client_record_id_fkey"
+            columns: ["client_record_id"]
+            isOneToOne: false
+            referencedRelation: "client_access_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_database_access: {
+        Row: {
+          bd_host: string | null
+          bd_porta: string | null
           bd_senha: string | null
-          bd_tns: string | null
+          bd_service_name: string | null
           bd_usuario: string | null
-          cliente: string
+          client_record_id: string
+          created_at: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          bd_host?: string | null
+          bd_porta?: string | null
+          bd_senha?: string | null
+          bd_service_name?: string | null
+          bd_usuario?: string | null
+          client_record_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          bd_host?: string | null
+          bd_porta?: string | null
+          bd_senha?: string | null
+          bd_service_name?: string | null
+          bd_usuario?: string | null
+          client_record_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_database_access_client_record_id_fkey"
+            columns: ["client_record_id"]
+            isOneToOne: false
+            referencedRelation: "client_access_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_docker_access: {
+        Row: {
+          client_record_id: string
           created_at: string
           docker_senha: string | null
           docker_so: string | null
           docker_usuario: string | null
           id: string
+          updated_at: string
+        }
+        Insert: {
+          client_record_id: string
+          created_at?: string
+          docker_senha?: string | null
+          docker_so?: string | null
+          docker_usuario?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          client_record_id?: string
+          created_at?: string
+          docker_senha?: string | null
+          docker_so?: string | null
+          docker_usuario?: string | null
+          id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_docker_access_client_record_id_fkey"
+            columns: ["client_record_id"]
+            isOneToOne: false
+            referencedRelation: "client_access_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_server_access: {
+        Row: {
+          client_record_id: string
+          created_at: string
+          id: string
+          servidor_ip: string | null
           servidor_senha: string | null
           servidor_so: string | null
           servidor_usuario: string | null
+          updated_at: string
+        }
+        Insert: {
+          client_record_id: string
+          created_at?: string
+          id?: string
+          servidor_ip?: string | null
+          servidor_senha?: string | null
+          servidor_so?: string | null
+          servidor_usuario?: string | null
+          updated_at?: string
+        }
+        Update: {
+          client_record_id?: string
+          created_at?: string
+          id?: string
+          servidor_ip?: string | null
+          servidor_senha?: string | null
+          servidor_so?: string | null
+          servidor_usuario?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_server_access_client_record_id_fkey"
+            columns: ["client_record_id"]
+            isOneToOne: false
+            referencedRelation: "client_access_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_vpn_access: {
+        Row: {
+          client_record_id: string
+          created_at: string
+          id: string
           updated_at: string
           vpn_executavel_path: string | null
           vpn_ip_servidor: string | null
@@ -75,21 +245,9 @@ export type Database = {
           vpn_usuario: string | null
         }
         Insert: {
-          app_nome?: string | null
-          app_senha?: string | null
-          app_usuario?: string | null
-          bd_senha?: string | null
-          bd_tns?: string | null
-          bd_usuario?: string | null
-          cliente: string
+          client_record_id: string
           created_at?: string
-          docker_senha?: string | null
-          docker_so?: string | null
-          docker_usuario?: string | null
           id?: string
-          servidor_senha?: string | null
-          servidor_so?: string | null
-          servidor_usuario?: string | null
           updated_at?: string
           vpn_executavel_path?: string | null
           vpn_ip_servidor?: string | null
@@ -98,21 +256,9 @@ export type Database = {
           vpn_usuario?: string | null
         }
         Update: {
-          app_nome?: string | null
-          app_senha?: string | null
-          app_usuario?: string | null
-          bd_senha?: string | null
-          bd_tns?: string | null
-          bd_usuario?: string | null
-          cliente?: string
+          client_record_id?: string
           created_at?: string
-          docker_senha?: string | null
-          docker_so?: string | null
-          docker_usuario?: string | null
           id?: string
-          servidor_senha?: string | null
-          servidor_so?: string | null
-          servidor_usuario?: string | null
           updated_at?: string
           vpn_executavel_path?: string | null
           vpn_ip_servidor?: string | null
@@ -120,7 +266,15 @@ export type Database = {
           vpn_senha?: string | null
           vpn_usuario?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "client_vpn_access_client_record_id_fkey"
+            columns: ["client_record_id"]
+            isOneToOne: false
+            referencedRelation: "client_access_records"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       daily: {
         Row: {

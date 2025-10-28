@@ -5,38 +5,32 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { useClientAccessRecords, ClientAccessRecord } from "@/hooks/useClientAccessRecords";
-import { Plus, Pencil, Trash2, Download, Upload, Eye, EyeOff } from "lucide-react";
+import { useClientAccessRecords, ClientAccessRecordWithDetails, VpnAccess, ServerAccess, DockerAccess, DatabaseAccess, AppAccess } from "@/hooks/useClientAccessRecords";
+import { Plus, Pencil, Trash2, Download, Eye, EyeOff, X } from "lucide-react";
 import { toast } from "sonner";
 
 export default function RegistrosAcessos() {
   const { records, isLoading, createRecord, updateRecord, deleteRecord, uploadVpnExecutable, downloadVpnExecutable } = useClientAccessRecords();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingRecord, setEditingRecord] = useState<ClientAccessRecord | null>(null);
+  const [editingRecord, setEditingRecord] = useState<ClientAccessRecordWithDetails | null>(null);
   const [filterCliente, setFilterCliente] = useState("");
-  const [vpnFile, setVpnFile] = useState<File | null>(null);
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
 
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<{
+    cliente: string;
+    vpn_access: VpnAccess[];
+    server_access: ServerAccess[];
+    docker_access: DockerAccess[];
+    database_access: DatabaseAccess[];
+    app_access: AppAccess[];
+  }>({
     cliente: "",
-    vpn_nome: "",
-    vpn_ip_servidor: "",
-    vpn_usuario: "",
-    vpn_senha: "",
-    servidor_so: "",
-    servidor_usuario: "",
-    servidor_senha: "",
-    docker_so: "",
-    docker_usuario: "",
-    docker_senha: "",
-    bd_tns: "",
-    bd_usuario: "",
-    bd_senha: "",
-    app_nome: "",
-    app_usuario: "",
-    app_senha: "",
+    vpn_access: [],
+    server_access: [],
+    docker_access: [],
+    database_access: [],
+    app_access: [],
   });
 
   const filteredRecords = records.filter((record) =>
@@ -45,21 +39,28 @@ export default function RegistrosAcessos() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    let vpnExecutavelPath = editingRecord?.vpn_executavel_path;
-    
-    if (vpnFile) {
-      try {
-        vpnExecutavelPath = await uploadVpnExecutable(vpnFile);
-      } catch (error) {
-        toast.error("Erro ao fazer upload do executável");
-        return;
-      }
-    }
+
+    // Upload de executáveis VPN
+    const vpnAccessWithFiles = await Promise.all(
+      formData.vpn_access.map(async (vpn) => {
+        // Verifica se é um arquivo (File) a ser enviado
+        if (vpn.vpn_executavel_path && 
+            typeof vpn.vpn_executavel_path !== "string") {
+          try {
+            const uploadedPath = await uploadVpnExecutable(vpn.vpn_executavel_path as any);
+            return { ...vpn, vpn_executavel_path: uploadedPath };
+          } catch (error) {
+            toast.error("Erro ao fazer upload do executável");
+            return vpn;
+          }
+        }
+        return vpn;
+      })
+    );
 
     const data = {
       ...formData,
-      vpn_executavel_path: vpnExecutavelPath,
+      vpn_access: vpnAccessWithFiles,
     };
 
     if (editingRecord) {
@@ -74,48 +75,25 @@ export default function RegistrosAcessos() {
   const resetForm = () => {
     setFormData({
       cliente: "",
-      vpn_nome: "",
-      vpn_ip_servidor: "",
-      vpn_usuario: "",
-      vpn_senha: "",
-      servidor_so: "",
-      servidor_usuario: "",
-      servidor_senha: "",
-      docker_so: "",
-      docker_usuario: "",
-      docker_senha: "",
-      bd_tns: "",
-      bd_usuario: "",
-      bd_senha: "",
-      app_nome: "",
-      app_usuario: "",
-      app_senha: "",
+      vpn_access: [],
+      server_access: [],
+      docker_access: [],
+      database_access: [],
+      app_access: [],
     });
-    setVpnFile(null);
     setEditingRecord(null);
     setIsDialogOpen(false);
   };
 
-  const handleEdit = (record: ClientAccessRecord) => {
+  const handleEdit = (record: ClientAccessRecordWithDetails) => {
     setEditingRecord(record);
     setFormData({
       cliente: record.cliente,
-      vpn_nome: record.vpn_nome || "",
-      vpn_ip_servidor: record.vpn_ip_servidor || "",
-      vpn_usuario: record.vpn_usuario || "",
-      vpn_senha: record.vpn_senha || "",
-      servidor_so: record.servidor_so || "",
-      servidor_usuario: record.servidor_usuario || "",
-      servidor_senha: record.servidor_senha || "",
-      docker_so: record.docker_so || "",
-      docker_usuario: record.docker_usuario || "",
-      docker_senha: record.docker_senha || "",
-      bd_tns: record.bd_tns || "",
-      bd_usuario: record.bd_usuario || "",
-      bd_senha: record.bd_senha || "",
-      app_nome: record.app_nome || "",
-      app_usuario: record.app_usuario || "",
-      app_senha: record.app_senha || "",
+      vpn_access: record.vpn_access.length > 0 ? record.vpn_access : [],
+      server_access: record.server_access.length > 0 ? record.server_access : [],
+      docker_access: record.docker_access.length > 0 ? record.docker_access : [],
+      database_access: record.database_access.length > 0 ? record.database_access : [],
+      app_access: record.app_access.length > 0 ? record.app_access : [],
     });
     setIsDialogOpen(true);
   };
@@ -170,6 +148,107 @@ export default function RegistrosAcessos() {
     );
   };
 
+  // Funções para adicionar/remover itens
+  const addVpnAccess = () => {
+    setFormData({
+      ...formData,
+      vpn_access: [...formData.vpn_access, {}]
+    });
+  };
+
+  const removeVpnAccess = (index: number) => {
+    setFormData({
+      ...formData,
+      vpn_access: formData.vpn_access.filter((_, i) => i !== index)
+    });
+  };
+
+  const updateVpnAccess = (index: number, field: keyof VpnAccess, value: any) => {
+    const updated = [...formData.vpn_access];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData({ ...formData, vpn_access: updated });
+  };
+
+  const addServerAccess = () => {
+    setFormData({
+      ...formData,
+      server_access: [...formData.server_access, {}]
+    });
+  };
+
+  const removeServerAccess = (index: number) => {
+    setFormData({
+      ...formData,
+      server_access: formData.server_access.filter((_, i) => i !== index)
+    });
+  };
+
+  const updateServerAccess = (index: number, field: keyof ServerAccess, value: any) => {
+    const updated = [...formData.server_access];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData({ ...formData, server_access: updated });
+  };
+
+  const addDockerAccess = () => {
+    setFormData({
+      ...formData,
+      docker_access: [...formData.docker_access, {}]
+    });
+  };
+
+  const removeDockerAccess = (index: number) => {
+    setFormData({
+      ...formData,
+      docker_access: formData.docker_access.filter((_, i) => i !== index)
+    });
+  };
+
+  const updateDockerAccess = (index: number, field: keyof DockerAccess, value: any) => {
+    const updated = [...formData.docker_access];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData({ ...formData, docker_access: updated });
+  };
+
+  const addDatabaseAccess = () => {
+    setFormData({
+      ...formData,
+      database_access: [...formData.database_access, {}]
+    });
+  };
+
+  const removeDatabaseAccess = (index: number) => {
+    setFormData({
+      ...formData,
+      database_access: formData.database_access.filter((_, i) => i !== index)
+    });
+  };
+
+  const updateDatabaseAccess = (index: number, field: keyof DatabaseAccess, value: any) => {
+    const updated = [...formData.database_access];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData({ ...formData, database_access: updated });
+  };
+
+  const addAppAccess = () => {
+    setFormData({
+      ...formData,
+      app_access: [...formData.app_access, {}]
+    });
+  };
+
+  const removeAppAccess = (index: number) => {
+    setFormData({
+      ...formData,
+      app_access: formData.app_access.filter((_, i) => i !== index)
+    });
+  };
+
+  const updateAppAccess = (index: number, field: keyof AppAccess, value: any) => {
+    const updated = [...formData.app_access];
+    updated[index] = { ...updated[index], [field]: value };
+    setFormData({ ...formData, app_access: updated });
+  };
+
   return (
     <Layout>
       <div className="container mx-auto py-8">
@@ -182,7 +261,7 @@ export default function RegistrosAcessos() {
                 Novo Registro
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+            <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>
                   {editingRecord ? "Editar Registro" : "Novo Registro de Acesso"}
@@ -203,179 +282,393 @@ export default function RegistrosAcessos() {
                     />
                   </div>
 
-                  <Accordion type="single" collapsible className="w-full">
+                  <Accordion type="multiple" className="w-full">
+                    {/* VPN Access */}
                     <AccordionItem value="vpn">
-                      <AccordionTrigger>Acesso ao Cliente via VPN</AccordionTrigger>
-                      <AccordionContent className="space-y-4">
-                        <div>
-                          <Label htmlFor="vpn_nome">Nome da VPN</Label>
-                          <Input
-                            id="vpn_nome"
-                            value={formData.vpn_nome}
-                            onChange={(e) => setFormData({ ...formData, vpn_nome: e.target.value })}
-                          />
+                      <AccordionTrigger>
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <span>Acesso ao Cliente via VPN ({formData.vpn_access.length})</span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addVpnAccess();
+                            }}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Adicionar VPN
+                          </Button>
                         </div>
-                        <div>
-                          <Label htmlFor="vpn_executavel">Upload do Executável</Label>
-                          <Input
-                            id="vpn_executavel"
-                            type="file"
-                            onChange={(e) => setVpnFile(e.target.files?.[0] || null)}
-                          />
-                          {editingRecord?.vpn_executavel_path && (
-                            <p className="text-sm text-muted-foreground mt-1">
-                              Arquivo atual: {editingRecord.vpn_executavel_path}
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-6">
+                          {formData.vpn_access.map((vpn, index) => (
+                            <Card key={index}>
+                              <CardHeader>
+                                <div className="flex justify-between items-center">
+                                  <CardTitle className="text-sm">VPN {index + 1}</CardTitle>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => removeVpnAccess(index)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="space-y-4">
+                                <div>
+                                  <Label>Nome da VPN</Label>
+                                  <Input
+                                    value={vpn.vpn_nome || ""}
+                                    onChange={(e) => updateVpnAccess(index, "vpn_nome", e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Upload do Executável</Label>
+                                  <Input
+                                    type="file"
+                                    onChange={(e) => updateVpnAccess(index, "vpn_executavel_path", e.target.files?.[0])}
+                                  />
+                                  {vpn.vpn_executavel_path && typeof vpn.vpn_executavel_path === "string" && (
+                                    <p className="text-sm text-muted-foreground mt-1">
+                                      Arquivo atual: {vpn.vpn_executavel_path}
+                                    </p>
+                                  )}
+                                </div>
+                                <div>
+                                  <Label>IP do Servidor</Label>
+                                  <Input
+                                    value={vpn.vpn_ip_servidor || ""}
+                                    onChange={(e) => updateVpnAccess(index, "vpn_ip_servidor", e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Usuário</Label>
+                                  <Input
+                                    value={vpn.vpn_usuario || ""}
+                                    onChange={(e) => updateVpnAccess(index, "vpn_usuario", e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Senha</Label>
+                                  <Input
+                                    type="password"
+                                    value={vpn.vpn_senha || ""}
+                                    onChange={(e) => updateVpnAccess(index, "vpn_senha", e.target.value)}
+                                  />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                          {formData.vpn_access.length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              Nenhum acesso VPN adicionado. Clique em "Adicionar VPN" acima.
                             </p>
                           )}
                         </div>
-                        <div>
-                          <Label htmlFor="vpn_ip_servidor">IP do Servidor</Label>
-                          <Input
-                            id="vpn_ip_servidor"
-                            value={formData.vpn_ip_servidor}
-                            onChange={(e) => setFormData({ ...formData, vpn_ip_servidor: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="vpn_usuario">Usuário</Label>
-                          <Input
-                            id="vpn_usuario"
-                            value={formData.vpn_usuario}
-                            onChange={(e) => setFormData({ ...formData, vpn_usuario: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="vpn_senha">Senha</Label>
-                          <Input
-                            id="vpn_senha"
-                            type="password"
-                            value={formData.vpn_senha}
-                            onChange={(e) => setFormData({ ...formData, vpn_senha: e.target.value })}
-                          />
-                        </div>
                       </AccordionContent>
                     </AccordionItem>
 
+                    {/* Server Access */}
                     <AccordionItem value="servidor">
-                      <AccordionTrigger>Servidor</AccordionTrigger>
-                      <AccordionContent className="space-y-4">
-                        <div>
-                          <Label htmlFor="servidor_so">SO do Servidor</Label>
-                          <Input
-                            id="servidor_so"
-                            value={formData.servidor_so}
-                            onChange={(e) => setFormData({ ...formData, servidor_so: e.target.value })}
-                          />
+                      <AccordionTrigger>
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <span>Servidor ({formData.server_access.length})</span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addServerAccess();
+                            }}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Adicionar Servidor
+                          </Button>
                         </div>
-                        <div>
-                          <Label htmlFor="servidor_usuario">Usuário</Label>
-                          <Input
-                            id="servidor_usuario"
-                            value={formData.servidor_usuario}
-                            onChange={(e) => setFormData({ ...formData, servidor_usuario: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="servidor_senha">Senha</Label>
-                          <Input
-                            id="servidor_senha"
-                            type="password"
-                            value={formData.servidor_senha}
-                            onChange={(e) => setFormData({ ...formData, servidor_senha: e.target.value })}
-                          />
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-6">
+                          {formData.server_access.map((server, index) => (
+                            <Card key={index}>
+                              <CardHeader>
+                                <div className="flex justify-between items-center">
+                                  <CardTitle className="text-sm">Servidor {index + 1}</CardTitle>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => removeServerAccess(index)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="space-y-4">
+                                <div>
+                                  <Label>SO do Servidor</Label>
+                                  <Input
+                                    value={server.servidor_so || ""}
+                                    onChange={(e) => updateServerAccess(index, "servidor_so", e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>IP do Servidor</Label>
+                                  <Input
+                                    value={server.servidor_ip || ""}
+                                    onChange={(e) => updateServerAccess(index, "servidor_ip", e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Usuário</Label>
+                                  <Input
+                                    value={server.servidor_usuario || ""}
+                                    onChange={(e) => updateServerAccess(index, "servidor_usuario", e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Senha</Label>
+                                  <Input
+                                    type="password"
+                                    value={server.servidor_senha || ""}
+                                    onChange={(e) => updateServerAccess(index, "servidor_senha", e.target.value)}
+                                  />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                          {formData.server_access.length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              Nenhum servidor adicionado. Clique em "Adicionar Servidor" acima.
+                            </p>
+                          )}
                         </div>
                       </AccordionContent>
                     </AccordionItem>
 
+                    {/* Docker Access */}
                     <AccordionItem value="docker">
-                      <AccordionTrigger>Docker</AccordionTrigger>
-                      <AccordionContent className="space-y-4">
-                        <div>
-                          <Label htmlFor="docker_so">SO do Servidor</Label>
-                          <Input
-                            id="docker_so"
-                            value={formData.docker_so}
-                            onChange={(e) => setFormData({ ...formData, docker_so: e.target.value })}
-                          />
+                      <AccordionTrigger>
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <span>Docker ({formData.docker_access.length})</span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addDockerAccess();
+                            }}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Adicionar Docker
+                          </Button>
                         </div>
-                        <div>
-                          <Label htmlFor="docker_usuario">Usuário</Label>
-                          <Input
-                            id="docker_usuario"
-                            value={formData.docker_usuario}
-                            onChange={(e) => setFormData({ ...formData, docker_usuario: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="docker_senha">Senha</Label>
-                          <Input
-                            id="docker_senha"
-                            type="password"
-                            value={formData.docker_senha}
-                            onChange={(e) => setFormData({ ...formData, docker_senha: e.target.value })}
-                          />
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-6">
+                          {formData.docker_access.map((docker, index) => (
+                            <Card key={index}>
+                              <CardHeader>
+                                <div className="flex justify-between items-center">
+                                  <CardTitle className="text-sm">Docker {index + 1}</CardTitle>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => removeDockerAccess(index)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="space-y-4">
+                                <div>
+                                  <Label>SO do Servidor</Label>
+                                  <Input
+                                    value={docker.docker_so || ""}
+                                    onChange={(e) => updateDockerAccess(index, "docker_so", e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Usuário</Label>
+                                  <Input
+                                    value={docker.docker_usuario || ""}
+                                    onChange={(e) => updateDockerAccess(index, "docker_usuario", e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Senha</Label>
+                                  <Input
+                                    type="password"
+                                    value={docker.docker_senha || ""}
+                                    onChange={(e) => updateDockerAccess(index, "docker_senha", e.target.value)}
+                                  />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                          {formData.docker_access.length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              Nenhum Docker adicionado. Clique em "Adicionar Docker" acima.
+                            </p>
+                          )}
                         </div>
                       </AccordionContent>
                     </AccordionItem>
 
+                    {/* Database Access */}
                     <AccordionItem value="bd">
-                      <AccordionTrigger>Banco de Dados</AccordionTrigger>
-                      <AccordionContent className="space-y-4">
-                        <div>
-                          <Label htmlFor="bd_tns">TNS de Conexão</Label>
-                          <Input
-                            id="bd_tns"
-                            value={formData.bd_tns}
-                            onChange={(e) => setFormData({ ...formData, bd_tns: e.target.value })}
-                          />
+                      <AccordionTrigger>
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <span>Banco de Dados ({formData.database_access.length})</span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addDatabaseAccess();
+                            }}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Adicionar BD
+                          </Button>
                         </div>
-                        <div>
-                          <Label htmlFor="bd_usuario">Usuário</Label>
-                          <Input
-                            id="bd_usuario"
-                            value={formData.bd_usuario}
-                            onChange={(e) => setFormData({ ...formData, bd_usuario: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="bd_senha">Senha</Label>
-                          <Input
-                            id="bd_senha"
-                            type="password"
-                            value={formData.bd_senha}
-                            onChange={(e) => setFormData({ ...formData, bd_senha: e.target.value })}
-                          />
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-6">
+                          {formData.database_access.map((db, index) => (
+                            <Card key={index}>
+                              <CardHeader>
+                                <div className="flex justify-between items-center">
+                                  <CardTitle className="text-sm">Banco de Dados {index + 1}</CardTitle>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => removeDatabaseAccess(index)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="space-y-4">
+                                <div>
+                                  <Label>Host de Conexão</Label>
+                                  <Input
+                                    value={db.bd_host || ""}
+                                    onChange={(e) => updateDatabaseAccess(index, "bd_host", e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Service Name</Label>
+                                  <Input
+                                    value={db.bd_service_name || ""}
+                                    onChange={(e) => updateDatabaseAccess(index, "bd_service_name", e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Porta</Label>
+                                  <Input
+                                    value={db.bd_porta || ""}
+                                    onChange={(e) => updateDatabaseAccess(index, "bd_porta", e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Usuário</Label>
+                                  <Input
+                                    value={db.bd_usuario || ""}
+                                    onChange={(e) => updateDatabaseAccess(index, "bd_usuario", e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Senha</Label>
+                                  <Input
+                                    type="password"
+                                    value={db.bd_senha || ""}
+                                    onChange={(e) => updateDatabaseAccess(index, "bd_senha", e.target.value)}
+                                  />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                          {formData.database_access.length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              Nenhum banco de dados adicionado. Clique em "Adicionar BD" acima.
+                            </p>
+                          )}
                         </div>
                       </AccordionContent>
                     </AccordionItem>
 
+                    {/* App Access */}
                     <AccordionItem value="app">
-                      <AccordionTrigger>Aplicações</AccordionTrigger>
-                      <AccordionContent className="space-y-4">
-                        <div>
-                          <Label htmlFor="app_nome">Nome da Aplicação</Label>
-                          <Input
-                            id="app_nome"
-                            value={formData.app_nome}
-                            onChange={(e) => setFormData({ ...formData, app_nome: e.target.value })}
-                          />
+                      <AccordionTrigger>
+                        <div className="flex items-center justify-between w-full pr-4">
+                          <span>Aplicações ({formData.app_access.length})</span>
+                          <Button
+                            type="button"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              addAppAccess();
+                            }}
+                          >
+                            <Plus className="h-4 w-4 mr-1" />
+                            Adicionar App
+                          </Button>
                         </div>
-                        <div>
-                          <Label htmlFor="app_usuario">Usuário</Label>
-                          <Input
-                            id="app_usuario"
-                            value={formData.app_usuario}
-                            onChange={(e) => setFormData({ ...formData, app_usuario: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label htmlFor="app_senha">Senha</Label>
-                          <Input
-                            id="app_senha"
-                            type="password"
-                            value={formData.app_senha}
-                            onChange={(e) => setFormData({ ...formData, app_senha: e.target.value })}
-                          />
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-6">
+                          {formData.app_access.map((app, index) => (
+                            <Card key={index}>
+                              <CardHeader>
+                                <div className="flex justify-between items-center">
+                                  <CardTitle className="text-sm">Aplicação {index + 1}</CardTitle>
+                                  <Button
+                                    type="button"
+                                    variant="destructive"
+                                    size="sm"
+                                    onClick={() => removeAppAccess(index)}
+                                  >
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </CardHeader>
+                              <CardContent className="space-y-4">
+                                <div>
+                                  <Label>Nome da Aplicação</Label>
+                                  <Input
+                                    value={app.app_nome || ""}
+                                    onChange={(e) => updateAppAccess(index, "app_nome", e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Usuário</Label>
+                                  <Input
+                                    value={app.app_usuario || ""}
+                                    onChange={(e) => updateAppAccess(index, "app_usuario", e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <Label>Senha</Label>
+                                  <Input
+                                    type="password"
+                                    value={app.app_senha || ""}
+                                    onChange={(e) => updateAppAccess(index, "app_senha", e.target.value)}
+                                  />
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
+                          {formData.app_access.length === 0 && (
+                            <p className="text-sm text-muted-foreground text-center py-4">
+                              Nenhuma aplicação adicionada. Clique em "Adicionar App" acima.
+                            </p>
+                          )}
                         </div>
                       </AccordionContent>
                     </AccordionItem>
@@ -443,174 +736,226 @@ export default function RegistrosAcessos() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <Accordion type="single" collapsible>
-                        {record.vpn_nome && (
+                      <Accordion type="multiple" className="w-full">
+                        {/* VPN Details */}
+                        {record.vpn_access.length > 0 && (
                           <AccordionItem value="vpn">
-                            <AccordionTrigger>VPN</AccordionTrigger>
+                            <AccordionTrigger>
+                              Acesso VPN ({record.vpn_access.length})
+                            </AccordionTrigger>
                             <AccordionContent>
-                              <Table>
-                                <TableBody>
-                                  <TableRow>
-                                    <TableCell className="font-semibold">Nome da VPN</TableCell>
-                                    <TableCell>{record.vpn_nome}</TableCell>
-                                  </TableRow>
-                                  {record.vpn_executavel_path && (
-                                    <TableRow>
-                                      <TableCell className="font-semibold">Executável</TableCell>
-                                      <TableCell>
-                                        <Button
-                                          variant="outline"
-                                          size="sm"
-                                          onClick={() => handleDownloadExecutable(record.vpn_executavel_path!, record.cliente)}
-                                        >
-                                          <Download className="mr-2 h-4 w-4" />
-                                          Download
-                                        </Button>
-                                      </TableCell>
-                                    </TableRow>
-                                  )}
-                                  {record.vpn_ip_servidor && (
-                                    <TableRow>
-                                      <TableCell className="font-semibold">IP do Servidor</TableCell>
-                                      <TableCell>{record.vpn_ip_servidor}</TableCell>
-                                    </TableRow>
-                                  )}
-                                  {record.vpn_usuario && (
-                                    <TableRow>
-                                      <TableCell className="font-semibold">Usuário</TableCell>
-                                      <TableCell>{record.vpn_usuario}</TableCell>
-                                    </TableRow>
-                                  )}
-                                  {record.vpn_senha && (
-                                    <TableRow>
-                                      <TableCell className="font-semibold">Senha</TableCell>
-                                      <TableCell>
-                                        <PasswordField value={record.vpn_senha} recordId={record.id} field="vpn_senha" />
-                                      </TableCell>
-                                    </TableRow>
-                                  )}
-                                </TableBody>
-                              </Table>
+                              <div className="space-y-4">
+                                {record.vpn_access.map((vpn, index) => (
+                                  <Card key={vpn.id || index}>
+                                    <CardHeader>
+                                      <CardTitle className="text-sm">VPN {index + 1}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-2">
+                                      {vpn.vpn_nome && (
+                                        <div>
+                                          <strong>Nome:</strong> {vpn.vpn_nome}
+                                        </div>
+                                      )}
+                                      {vpn.vpn_executavel_path && (
+                                        <div className="flex items-center gap-2">
+                                          <strong>Executável:</strong>
+                                          <Button
+                                            size="sm"
+                                            variant="outline"
+                                            onClick={() => handleDownloadExecutable(vpn.vpn_executavel_path!, record.cliente)}
+                                          >
+                                            <Download className="h-4 w-4 mr-1" />
+                                            Download
+                                          </Button>
+                                        </div>
+                                      )}
+                                      {vpn.vpn_ip_servidor && (
+                                        <div>
+                                          <strong>IP Servidor:</strong> {vpn.vpn_ip_servidor}
+                                        </div>
+                                      )}
+                                      {vpn.vpn_usuario && (
+                                        <div>
+                                          <strong>Usuário:</strong> {vpn.vpn_usuario}
+                                        </div>
+                                      )}
+                                      {vpn.vpn_senha && (
+                                        <div>
+                                          <strong>Senha:</strong>
+                                          <PasswordField value={vpn.vpn_senha} recordId={vpn.id || `vpn-${index}`} field="vpn_senha" />
+                                        </div>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
                             </AccordionContent>
                           </AccordionItem>
                         )}
 
-                        {record.servidor_so && (
+                        {/* Server Details */}
+                        {record.server_access.length > 0 && (
                           <AccordionItem value="servidor">
-                            <AccordionTrigger>Servidor</AccordionTrigger>
+                            <AccordionTrigger>
+                              Servidores ({record.server_access.length})
+                            </AccordionTrigger>
                             <AccordionContent>
-                              <Table>
-                                <TableBody>
-                                  <TableRow>
-                                    <TableCell className="font-semibold">SO do Servidor</TableCell>
-                                    <TableCell>{record.servidor_so}</TableCell>
-                                  </TableRow>
-                                  {record.servidor_usuario && (
-                                    <TableRow>
-                                      <TableCell className="font-semibold">Usuário</TableCell>
-                                      <TableCell>{record.servidor_usuario}</TableCell>
-                                    </TableRow>
-                                  )}
-                                  {record.servidor_senha && (
-                                    <TableRow>
-                                      <TableCell className="font-semibold">Senha</TableCell>
-                                      <TableCell>
-                                        <PasswordField value={record.servidor_senha} recordId={record.id} field="servidor_senha" />
-                                      </TableCell>
-                                    </TableRow>
-                                  )}
-                                </TableBody>
-                              </Table>
+                              <div className="space-y-4">
+                                {record.server_access.map((server, index) => (
+                                  <Card key={server.id || index}>
+                                    <CardHeader>
+                                      <CardTitle className="text-sm">Servidor {index + 1}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-2">
+                                      {server.servidor_so && (
+                                        <div>
+                                          <strong>SO:</strong> {server.servidor_so}
+                                        </div>
+                                      )}
+                                      {server.servidor_ip && (
+                                        <div>
+                                          <strong>IP:</strong> {server.servidor_ip}
+                                        </div>
+                                      )}
+                                      {server.servidor_usuario && (
+                                        <div>
+                                          <strong>Usuário:</strong> {server.servidor_usuario}
+                                        </div>
+                                      )}
+                                      {server.servidor_senha && (
+                                        <div>
+                                          <strong>Senha:</strong>
+                                          <PasswordField value={server.servidor_senha} recordId={server.id || `server-${index}`} field="servidor_senha" />
+                                        </div>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
                             </AccordionContent>
                           </AccordionItem>
                         )}
 
-                        {record.docker_so && (
+                        {/* Docker Details */}
+                        {record.docker_access.length > 0 && (
                           <AccordionItem value="docker">
-                            <AccordionTrigger>Docker</AccordionTrigger>
+                            <AccordionTrigger>
+                              Docker ({record.docker_access.length})
+                            </AccordionTrigger>
                             <AccordionContent>
-                              <Table>
-                                <TableBody>
-                                  <TableRow>
-                                    <TableCell className="font-semibold">SO do Servidor</TableCell>
-                                    <TableCell>{record.docker_so}</TableCell>
-                                  </TableRow>
-                                  {record.docker_usuario && (
-                                    <TableRow>
-                                      <TableCell className="font-semibold">Usuário</TableCell>
-                                      <TableCell>{record.docker_usuario}</TableCell>
-                                    </TableRow>
-                                  )}
-                                  {record.docker_senha && (
-                                    <TableRow>
-                                      <TableCell className="font-semibold">Senha</TableCell>
-                                      <TableCell>
-                                        <PasswordField value={record.docker_senha} recordId={record.id} field="docker_senha" />
-                                      </TableCell>
-                                    </TableRow>
-                                  )}
-                                </TableBody>
-                              </Table>
+                              <div className="space-y-4">
+                                {record.docker_access.map((docker, index) => (
+                                  <Card key={docker.id || index}>
+                                    <CardHeader>
+                                      <CardTitle className="text-sm">Docker {index + 1}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-2">
+                                      {docker.docker_so && (
+                                        <div>
+                                          <strong>SO:</strong> {docker.docker_so}
+                                        </div>
+                                      )}
+                                      {docker.docker_usuario && (
+                                        <div>
+                                          <strong>Usuário:</strong> {docker.docker_usuario}
+                                        </div>
+                                      )}
+                                      {docker.docker_senha && (
+                                        <div>
+                                          <strong>Senha:</strong>
+                                          <PasswordField value={docker.docker_senha} recordId={docker.id || `docker-${index}`} field="docker_senha" />
+                                        </div>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
                             </AccordionContent>
                           </AccordionItem>
                         )}
 
-                        {record.bd_tns && (
+                        {/* Database Details */}
+                        {record.database_access.length > 0 && (
                           <AccordionItem value="bd">
-                            <AccordionTrigger>Banco de Dados</AccordionTrigger>
+                            <AccordionTrigger>
+                              Banco de Dados ({record.database_access.length})
+                            </AccordionTrigger>
                             <AccordionContent>
-                              <Table>
-                                <TableBody>
-                                  <TableRow>
-                                    <TableCell className="font-semibold">TNS de Conexão</TableCell>
-                                    <TableCell>{record.bd_tns}</TableCell>
-                                  </TableRow>
-                                  {record.bd_usuario && (
-                                    <TableRow>
-                                      <TableCell className="font-semibold">Usuário</TableCell>
-                                      <TableCell>{record.bd_usuario}</TableCell>
-                                    </TableRow>
-                                  )}
-                                  {record.bd_senha && (
-                                    <TableRow>
-                                      <TableCell className="font-semibold">Senha</TableCell>
-                                      <TableCell>
-                                        <PasswordField value={record.bd_senha} recordId={record.id} field="bd_senha" />
-                                      </TableCell>
-                                    </TableRow>
-                                  )}
-                                </TableBody>
-                              </Table>
+                              <div className="space-y-4">
+                                {record.database_access.map((db, index) => (
+                                  <Card key={db.id || index}>
+                                    <CardHeader>
+                                      <CardTitle className="text-sm">BD {index + 1}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-2">
+                                      {db.bd_host && (
+                                        <div>
+                                          <strong>Host:</strong> {db.bd_host}
+                                        </div>
+                                      )}
+                                      {db.bd_service_name && (
+                                        <div>
+                                          <strong>Service Name:</strong> {db.bd_service_name}
+                                        </div>
+                                      )}
+                                      {db.bd_porta && (
+                                        <div>
+                                          <strong>Porta:</strong> {db.bd_porta}
+                                        </div>
+                                      )}
+                                      {db.bd_usuario && (
+                                        <div>
+                                          <strong>Usuário:</strong> {db.bd_usuario}
+                                        </div>
+                                      )}
+                                      {db.bd_senha && (
+                                        <div>
+                                          <strong>Senha:</strong>
+                                          <PasswordField value={db.bd_senha} recordId={db.id || `db-${index}`} field="bd_senha" />
+                                        </div>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
                             </AccordionContent>
                           </AccordionItem>
                         )}
 
-                        {record.app_nome && (
+                        {/* App Details */}
+                        {record.app_access.length > 0 && (
                           <AccordionItem value="app">
-                            <AccordionTrigger>Aplicações</AccordionTrigger>
+                            <AccordionTrigger>
+                              Aplicações ({record.app_access.length})
+                            </AccordionTrigger>
                             <AccordionContent>
-                              <Table>
-                                <TableBody>
-                                  <TableRow>
-                                    <TableCell className="font-semibold">Nome da Aplicação</TableCell>
-                                    <TableCell>{record.app_nome}</TableCell>
-                                  </TableRow>
-                                  {record.app_usuario && (
-                                    <TableRow>
-                                      <TableCell className="font-semibold">Usuário</TableCell>
-                                      <TableCell>{record.app_usuario}</TableCell>
-                                    </TableRow>
-                                  )}
-                                  {record.app_senha && (
-                                    <TableRow>
-                                      <TableCell className="font-semibold">Senha</TableCell>
-                                      <TableCell>
-                                        <PasswordField value={record.app_senha} recordId={record.id} field="app_senha" />
-                                      </TableCell>
-                                    </TableRow>
-                                  )}
-                                </TableBody>
-                              </Table>
+                              <div className="space-y-4">
+                                {record.app_access.map((app, index) => (
+                                  <Card key={app.id || index}>
+                                    <CardHeader>
+                                      <CardTitle className="text-sm">App {index + 1}</CardTitle>
+                                    </CardHeader>
+                                    <CardContent className="space-y-2">
+                                      {app.app_nome && (
+                                        <div>
+                                          <strong>Nome:</strong> {app.app_nome}
+                                        </div>
+                                      )}
+                                      {app.app_usuario && (
+                                        <div>
+                                          <strong>Usuário:</strong> {app.app_usuario}
+                                        </div>
+                                      )}
+                                      {app.app_senha && (
+                                        <div>
+                                          <strong>Senha:</strong>
+                                          <PasswordField value={app.app_senha} recordId={app.id || `app-${index}`} field="app_senha" />
+                                        </div>
+                                      )}
+                                    </CardContent>
+                                  </Card>
+                                ))}
+                              </div>
                             </AccordionContent>
                           </AccordionItem>
                         )}
@@ -618,6 +963,12 @@ export default function RegistrosAcessos() {
                     </CardContent>
                   </Card>
                 ))}
+
+                {filteredRecords.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">
+                    Nenhum registro encontrado
+                  </p>
+                )}
               </div>
             )}
           </CardContent>
