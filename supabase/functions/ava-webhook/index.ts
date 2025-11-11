@@ -47,10 +47,10 @@ Deno.serve(async (req) => {
 
     // Parse do body
     const body = await req.json()
-    const { nm_cliente, dt_registro, ds_tipo, ds_descricao, ie_status } = body
+    const { nm_cliente, dt_registro, ds_tipo, ds_descricao, ie_status: rawStatus } = body
 
     // Validar campos obrigatórios
-    if (!nm_cliente || !dt_registro || !ds_tipo || !ie_status) {
+    if (!nm_cliente || !dt_registro || !ds_tipo || !rawStatus) {
       console.error('Missing required fields:', body)
       return new Response(
         JSON.stringify({ 
@@ -60,6 +60,21 @@ Deno.serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    // Mapear ie_status para valores válidos
+    const statusMap: Record<string, string> = {
+      '1': 'success',
+      '0': 'error',
+      '2': 'pending',
+      '3': 'info',
+      'success': 'success',
+      'error': 'error',
+      'pending': 'pending',
+      'info': 'info',
+      'other': 'other'
+    }
+    
+    const ie_status = statusMap[String(rawStatus).toLowerCase()] || 'other'
 
     // Converter dt_registro para timestamptz
     let parsedDate: Date
