@@ -10,6 +10,7 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
   NavigationMenuTrigger,
+  NavigationMenuViewport,
 } from './ui/navigation-menu';
 import logoGhas from '@/assets/logo-ghas.png';
 import { LucideIcon } from 'lucide-react';
@@ -159,6 +160,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                     );
                   })}
                 </NavigationMenuList>
+                <NavigationMenuViewport />
               </NavigationMenu>
             </div>
             {user && (
