@@ -33,11 +33,8 @@ type MenuGroup = {
 const menuStructure: MenuGroup[] = [
   {
     name: 'Dashboard',
+    href: '/',
     icon: LayoutDashboard,
-    items: [
-      { name: 'Dashboard Atual', href: '/', icon: LayoutDashboard },
-      { name: 'Dados AVA', href: '/dados-ava', icon: Activity, adminOnly: true },
-    ],
   },
   {
     name: 'SCRUM',
@@ -67,6 +64,7 @@ const menuStructure: MenuGroup[] = [
     items: [
       { name: 'Administração', href: '/administracao', icon: Shield },
       { name: 'Sprint Planning', href: '/sprint-planning', icon: Calendar },
+      { name: 'Dados AVA', href: '/dados-ava', icon: Activity },
     ],
   },
 ];
