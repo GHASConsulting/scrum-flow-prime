@@ -13,6 +13,7 @@ import Projetos from "./pages/Projetos";
 import Auth from "./pages/Auth";
 import Administracao from "./pages/Administracao";
 import RegistrosAcessos from "./pages/RegistrosAcessos";
+import DadosAVA from "./pages/DadosAVA";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ function App() {
           <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
           <Route path="/administracao" element={<ProtectedRoute><Administracao /></ProtectedRoute>} />
           <Route path="/registros-acessos" element={<ProtectedRoute><RegistrosAcessos /></ProtectedRoute>} />
+          <Route path="/dados-ava" element={<ProtectedRoute><DadosAVA /></ProtectedRoute>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

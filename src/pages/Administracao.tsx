@@ -11,9 +11,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { z } from "zod";
-import { Trash2, Search, Edit, KeyRound } from "lucide-react";
+import { Trash2, Search, Edit, KeyRound, Copy } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useIntegracaoConfig } from "@/hooks/useIntegracaoConfig";
 
 const userSchema = z.object({
   nome: z.string().min(3, { message: "Nome deve ter no mínimo 3 caracteres" }),
@@ -50,6 +52,8 @@ export default function Administracao() {
     role: "operador" as "administrador" | "operador",
   });
   const [submitting, setSubmitting] = useState(false);
+  const [webhookToken, setWebhookToken] = useState("");
+  const { config, isLoading: configLoading, saveConfig } = useIntegracaoConfig();
 
   useEffect(() => {
     if (!loading && (!user || userRole !== "administrador")) {
@@ -62,6 +66,12 @@ export default function Administracao() {
       fetchUsers();
     }
   }, [user, userRole]);
+
+  useEffect(() => {
+    if (config) {
+      setWebhookToken(config.webhook_token);
+    }
+  }, [config]);
 
   const fetchUsers = async () => {
     const { data: profilesData, error: profilesError } = await supabase
@@ -281,6 +291,20 @@ export default function Administracao() {
     user.nome.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const handleSaveWebhook = () => {
+    if (!webhookToken.trim()) {
+      toast.error("Token não pode estar vazio");
+      return;
+    }
+    saveConfig(webhookToken);
+  };
+
+  const copyWebhookUrl = () => {
+    const url = `https://vzqyidiudjtmlwbqriza.supabase.co/functions/v1/ava-webhook`;
+    navigator.clipboard.writeText(url);
+    toast.success("URL copiada para a área de transferência");
+  };
+
   if (loading) {
     return (
       <Layout>
@@ -298,9 +322,16 @@ export default function Administracao() {
   return (
     <Layout>
       <div className="container mx-auto p-6 space-y-8">
-        <h1 className="text-3xl font-bold">Administração de Usuários</h1>
+        <h1 className="text-3xl font-bold">Administração</h1>
 
-        <Card>
+        <Tabs defaultValue="usuarios" className="w-full">
+          <TabsList>
+            <TabsTrigger value="usuarios">Usuários</TabsTrigger>
+            <TabsTrigger value="integracao">Integração</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="usuarios" className="space-y-8">
+            <Card>
           <CardHeader>
             <CardTitle>Cadastrar Novo Usuário</CardTitle>
             <CardDescription>
@@ -538,6 +569,80 @@ export default function Administracao() {
             </div>
           </DialogContent>
         </Dialog>
+          </TabsContent>
+
+          <TabsContent value="integracao" className="space-y-8">
+            <Card>
+              <CardHeader>
+                <CardTitle>Configuração de Webhook</CardTitle>
+                <CardDescription>
+                  Configure o token de autenticação para o webhook do BotConversa
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="webhook-url">URL do Webhook</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      id="webhook-url"
+                      value="https://vzqyidiudjtmlwbqriza.supabase.co/functions/v1/ava-webhook"
+                      readOnly
+                      className="font-mono text-sm"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={copyWebhookUrl}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Use esta URL no BotConversa para enviar os eventos
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="webhook-token">Token de Autenticação</Label>
+                  <Input
+                    id="webhook-token"
+                    type="password"
+                    value={webhookToken}
+                    onChange={(e) => setWebhookToken(e.target.value)}
+                    placeholder="Digite o token secreto"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Este token deve ser enviado no header X-BotConversa-Token
+                  </p>
+                </div>
+
+                <Button onClick={handleSaveWebhook} disabled={configLoading}>
+                  Salvar Configuração
+                </Button>
+
+                <div className="mt-6 p-4 bg-muted rounded-lg">
+                  <h4 className="font-semibold mb-2">Exemplo de requisição:</h4>
+                  <pre className="text-xs bg-background p-3 rounded overflow-x-auto">
+{`POST https://vzqyidiudjtmlwbqriza.supabase.co/functions/v1/ava-webhook
+Headers:
+  X-BotConversa-Token: seu_token_aqui
+  Content-Type: application/json
+
+Body:
+{
+  "nm_cliente": "Nome do Cliente",
+  "dt_registro": "2025-01-01T10:00:00",
+  "ds_tipo": "faq",
+  "ds_descricao": "Descrição do evento",
+  "ie_status": "success"
+}`}
+                  </pre>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
       </div>
     </Layout>
   );

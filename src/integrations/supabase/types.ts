@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      ava_evento: {
+        Row: {
+          created_at: string
+          dedupe_key: string | null
+          ds_descricao: string | null
+          ds_tipo: string
+          dt_registro: string
+          id: string
+          ie_status: string
+          nm_cliente: string
+        }
+        Insert: {
+          created_at?: string
+          dedupe_key?: string | null
+          ds_descricao?: string | null
+          ds_tipo: string
+          dt_registro: string
+          id?: string
+          ie_status: string
+          nm_cliente: string
+        }
+        Update: {
+          created_at?: string
+          dedupe_key?: string | null
+          ds_descricao?: string | null
+          ds_tipo?: string
+          dt_registro?: string
+          id?: string
+          ie_status?: string
+          nm_cliente?: string
+        }
+        Relationships: []
+      }
       backlog: {
         Row: {
           created_at: string
@@ -319,6 +352,27 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      integracao_config: {
+        Row: {
+          created_at: string
+          id: string
+          updated_at: string
+          webhook_token: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          webhook_token: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          updated_at?: string
+          webhook_token?: string
+        }
+        Relationships: []
       }
       profiles: {
         Row: {

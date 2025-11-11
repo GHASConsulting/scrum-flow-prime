@@ -1,6 +1,6 @@
 import { Link, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
-import { LayoutDashboard, ListTodo, Calendar, MessageSquare, RotateCcw, Shield, LogOut, FolderKanban, KeyRound } from 'lucide-react';
+import { LayoutDashboard, ListTodo, Calendar, MessageSquare, RotateCcw, Shield, LogOut, FolderKanban, KeyRound, Activity } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { Button } from './ui/button';
 import logoGhas from '@/assets/logo-ghas.png';
@@ -47,18 +47,32 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                   );
                 })}
                 {userRole === "administrador" && (
-                  <Link
-                    to="/administracao"
-                    className={cn(
-                      "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
-                      location.pathname === "/administracao"
-                        ? "bg-primary text-primary-foreground"
-                        : "text-foreground hover:bg-secondary"
-                    )}
-                  >
-                    <Shield className="h-4 w-4" />
-                    Administração
-                  </Link>
+                  <>
+                    <Link
+                      to="/dados-ava"
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                        location.pathname === "/dados-ava"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-foreground hover:bg-secondary"
+                      )}
+                    >
+                      <Activity className="h-4 w-4" />
+                      Dados AVA
+                    </Link>
+                    <Link
+                      to="/administracao"
+                      className={cn(
+                        "flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-colors",
+                        location.pathname === "/administracao"
+                          ? "bg-primary text-primary-foreground"
+                          : "text-foreground hover:bg-secondary"
+                      )}
+                    >
+                      <Shield className="h-4 w-4" />
+                      Administração
+                    </Link>
+                  </>
                 )}
               </div>
             </div>
