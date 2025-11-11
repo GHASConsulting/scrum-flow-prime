@@ -12,8 +12,24 @@ import {
   NavigationMenuTrigger,
 } from './ui/navigation-menu';
 import logoGhas from '@/assets/logo-ghas.png';
+import { LucideIcon } from 'lucide-react';
 
-const menuStructure = [
+type MenuItem = {
+  name: string;
+  href: string;
+  icon: LucideIcon;
+  adminOnly?: boolean;
+};
+
+type MenuGroup = {
+  name: string;
+  icon: LucideIcon;
+  adminOnly?: boolean;
+  href?: string;
+  items?: MenuItem[];
+};
+
+const menuStructure: MenuGroup[] = [
   {
     name: 'Dashboard',
     icon: LayoutDashboard,
@@ -45,9 +61,12 @@ const menuStructure = [
   },
   {
     name: 'Administração',
-    href: '/administracao',
     icon: Shield,
     adminOnly: true,
+    items: [
+      { name: 'Administração', href: '/administracao', icon: Shield },
+      { name: 'Sprint Planning', href: '/sprint-planning', icon: Calendar },
+    ],
   },
 ];
 
