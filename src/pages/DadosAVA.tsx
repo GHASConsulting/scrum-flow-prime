@@ -216,8 +216,8 @@ const DadosAVA = () => {
           </CardContent>
         </Card>
 
-        {/* Estatísticas - Dúvidas */}
-        <div className="grid gap-4 md:grid-cols-4">
+        {/* 1ª Linha: Total de Registros */}
+        <div className="grid gap-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total de Registros</CardTitle>
@@ -227,7 +227,10 @@ const DadosAVA = () => {
               <div className="text-2xl font-bold">{stats.total}</div>
             </CardContent>
           </Card>
+        </div>
 
+        {/* 2ª Linha: Dúvidas */}
+        <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Total de Registros de Dúvidas</CardTitle>
@@ -259,7 +262,7 @@ const DadosAVA = () => {
           </Card>
         </div>
 
-        {/* Estatísticas - Alteração de Senha */}
+        {/* 3ª Linha: Alteração de Senha */}
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
