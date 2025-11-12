@@ -112,7 +112,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                             <Icon className="h-4 w-4 mr-2" />
                             {menu.name}
                           </NavigationMenuTrigger>
-                          <NavigationMenuContent>
+                          <NavigationMenuContent className="p-0">
                             <ul className="grid w-[220px] gap-1 p-0 bg-card">
                               {visibleItems.map((item) => {
                                 const ItemIcon = item.icon;
