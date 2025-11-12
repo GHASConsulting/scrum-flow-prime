@@ -113,7 +113,7 @@ export const Layout = ({ children }: { children: React.ReactNode }) => {
                             {menu.name}
                           </NavigationMenuTrigger>
                           <NavigationMenuContent>
-                            <ul className="grid w-[220px] gap-1 p-2 bg-card">
+                            <ul className="grid w-[220px] gap-1 p-0 bg-card">
                               {visibleItems.map((item) => {
                                 const ItemIcon = item.icon;
                                 const itemActive = location.pathname === item.href;
