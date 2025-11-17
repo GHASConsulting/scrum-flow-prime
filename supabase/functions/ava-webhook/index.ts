@@ -76,35 +76,11 @@ Deno.serve(async (req) => {
     
     const ie_status = statusMap[String(rawStatus).toLowerCase()] || 'other'
 
-    // Converter dt_registro para timestamptz
-    let parsedDate: Date
-    try {
-      // Tentar ISO primeiro
-      parsedDate = new Date(dt_registro)
-      
-      // Se não for ISO, tentar formato dd/MM/yyyy HH:mm
-      if (isNaN(parsedDate.getTime())) {
-        const [datePart, timePart] = dt_registro.split(' ')
-        const [day, month, year] = datePart.split('/')
-        const [hour, minute] = (timePart || '00:00').split(':')
-        parsedDate = new Date(
-          parseInt(year),
-          parseInt(month) - 1,
-          parseInt(day),
-          parseInt(hour),
-          parseInt(minute)
-        )
-      }
-    } catch (e) {
-      console.error('Invalid date format:', dt_registro, e)
-      return new Response(
-        JSON.stringify({ error: 'Invalid date format. Use ISO or dd/MM/yyyy HH:mm' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      )
-    }
+    // dt_registro agora é armazenado como string (varchar)
+    // Formato esperado: DD.MM.YYYY 00:00
 
     // Criar chave de idempotência (hash dos campos)
-    const dedupeString = `${nm_cliente}|${parsedDate.toISOString()}|${ds_tipo}|${ie_status}|${(ds_descricao || '').substring(0, 100)}`
+    const dedupeString = `${nm_cliente}|${dt_registro}|${ds_tipo}|${ie_status}|${(ds_descricao || '').substring(0, 100)}`
     const encoder = new TextEncoder()
     const data = encoder.encode(dedupeString)
     const hashBuffer = await crypto.subtle.digest('SHA-256', data)
@@ -116,7 +92,7 @@ Deno.serve(async (req) => {
       .from('ava_evento')
       .insert({
         nm_cliente,
-        dt_registro: parsedDate.toISOString(),
+        dt_registro,
         ds_tipo,
         ds_descricao: ds_descricao || null,
         ie_status,
