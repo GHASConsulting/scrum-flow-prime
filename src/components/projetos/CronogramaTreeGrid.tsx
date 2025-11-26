@@ -52,6 +52,7 @@ export function CronogramaTreeGrid({ projectId }: CronogramaTreeGridProps) {
         parent_id: null,
         notes: null,
         responsavel: null,
+        tipo_produto: null,
       });
     } catch (error) {
       console.error('Erro ao adicionar tarefa:', error);

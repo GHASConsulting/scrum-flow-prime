@@ -8,6 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useBacklog } from '@/hooks/useBacklog';
 import { useSprints } from '@/hooks/useSprints';
 import { useSprintTarefas } from '@/hooks/useSprintTarefas';
@@ -15,13 +16,15 @@ import { useProfiles } from '@/hooks/useProfiles';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toZonedTime } from 'date-fns-tz';
-import { CalendarIcon, Plus, Check, Trash2, X } from 'lucide-react';
+import { CalendarIcon, Plus, Check, Trash2, X, Edit } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { statusLabels, formatDate } from '@/lib/formatters';
+import type { BacklogItem, Status } from '@/types/scrum';
+import type { Tables } from '@/integrations/supabase/types';
 
 const SprintPlanning = () => {
-  const { backlog, addBacklogItem, deleteBacklogItem } = useBacklog();
+  const { backlog, addBacklogItem, updateBacklogItem, deleteBacklogItem } = useBacklog();
   const { sprints, addSprint, updateSprint } = useSprints();
   const { sprintTarefas, addSprintTarefa: addTarefaToSprint, deleteSprintTarefa } = useSprintTarefas();
   const { profiles } = useProfiles();
@@ -33,6 +36,8 @@ const SprintPlanning = () => {
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [filtroResponsavel, setFiltroResponsavel] = useState<string>('all');
   const [mostrarApenasSemSprint, setMostrarApenasSemSprint] = useState(false);
+  const [editingTask, setEditingTask] = useState<BacklogItem | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   
   const [newTask, setNewTask] = useState<{
     titulo: string;
@@ -40,12 +45,14 @@ const SprintPlanning = () => {
     story_points: number;
     prioridade: 'baixa' | 'media' | 'alta';
     responsavel: string;
+    tipo_produto?: 'Produto' | 'Projeto GHAS' | 'Projeto Inovemed';
   }>({
     titulo: '',
     descricao: '',
     story_points: 1,
     prioridade: 'media',
-    responsavel: ''
+    responsavel: '',
+    tipo_produto: undefined
   });
   
   const [newSprint, setNewSprint] = useState({
@@ -215,18 +222,85 @@ const SprintPlanning = () => {
         story_points: newTask.story_points,
         prioridade: newTask.prioridade,
         responsavel: newTask.responsavel.trim(),
-        status: 'todo'
-      });
+        status: 'todo',
+        ...(newTask.tipo_produto && { tipo_produto: newTask.tipo_produto })
+      } as any);
 
       setNewTask({
         titulo: '',
         descricao: '',
         story_points: 1,
         prioridade: 'media',
-        responsavel: ''
+        responsavel: '',
+        tipo_produto: undefined
       });
       setIsCreatingTask(false);
       toast.success('Tarefa criada no backlog');
+    } catch (error) {
+      // Error já tratado no hook
+    }
+  };
+
+  const handleEditTask = (task: Tables<'backlog'>) => {
+    setEditingTask({
+      id: task.id,
+      titulo: task.titulo,
+      descricao: task.descricao || '',
+      story_points: task.story_points,
+      prioridade: task.prioridade as 'baixa' | 'media' | 'alta',
+      status: task.status as Status,
+      responsavel: task.responsavel || '',
+      tipo_produto: (task as any).tipo_produto as 'Produto' | 'Projeto GHAS' | 'Projeto Inovemed' | undefined
+    });
+    setIsEditDialogOpen(true);
+  };
+
+  const handleUpdateTask = async () => {
+    if (!editingTask) return;
+
+    if (!editingTask.titulo.trim()) {
+      toast.error('O título é obrigatório');
+      return;
+    }
+
+    if (editingTask.titulo.trim().length > 200) {
+      toast.error('O título deve ter no máximo 200 caracteres');
+      return;
+    }
+
+    if (editingTask.descricao && editingTask.descricao.trim().length > 1000) {
+      toast.error('A descrição deve ter no máximo 1000 caracteres');
+      return;
+    }
+
+    if (editingTask.story_points < 1 || editingTask.story_points > 100) {
+      toast.error('Story points deve estar entre 1 e 100');
+      return;
+    }
+
+    if (!editingTask.responsavel || !editingTask.responsavel.trim()) {
+      toast.error('O responsável é obrigatório');
+      return;
+    }
+
+    try {
+      const updates: any = {
+        titulo: editingTask.titulo.trim(),
+        descricao: editingTask.descricao?.trim() || null,
+        story_points: editingTask.story_points,
+        prioridade: editingTask.prioridade,
+        responsavel: editingTask.responsavel.trim()
+      };
+      
+      if (editingTask.tipo_produto) {
+        updates.tipo_produto = editingTask.tipo_produto;
+      }
+
+      await updateBacklogItem(editingTask.id, updates);
+
+      setIsEditDialogOpen(false);
+      setEditingTask(null);
+      toast.success('Tarefa atualizada com sucesso');
     } catch (error) {
       // Error já tratado no hook
     }
@@ -715,6 +789,23 @@ const SprintPlanning = () => {
                     </Select>
                   </div>
 
+                  <div>
+                    <label className="text-sm font-medium">Tipo de Produto</label>
+                    <Select 
+                      value={newTask.tipo_produto || undefined} 
+                      onValueChange={(value: 'Produto' | 'Projeto GHAS' | 'Projeto Inovemed') => setNewTask({ ...newTask, tipo_produto: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o tipo" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Produto">Produto</SelectItem>
+                        <SelectItem value="Projeto GHAS">Projeto GHAS</SelectItem>
+                        <SelectItem value="Projeto Inovemed">Projeto Inovemed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
                   <div className="flex gap-2">
                     <Button onClick={handleCreateTask} className="flex-1">
                       Criar no Backlog
@@ -727,7 +818,8 @@ const SprintPlanning = () => {
                           descricao: '',
                           story_points: 1,
                           prioridade: 'media',
-                          responsavel: ''
+                          responsavel: '',
+                          tipo_produto: undefined
                         });
                       }} 
                       variant="outline" 
@@ -744,7 +836,11 @@ const SprintPlanning = () => {
                   {availableBacklog.map(item => {
                     const sprintDaTarefa = getSprintDaTarefa(item.id);
                     return (
-                      <div key={item.id} className="p-4 border rounded-lg space-y-3">
+                      <div 
+                        key={item.id} 
+                        className="p-4 border rounded-lg space-y-3 cursor-pointer hover:border-primary transition-colors"
+                        onClick={() => handleEditTask(item)}
+                      >
                         <div>
                           <h4 className="font-semibold text-sm">{item.titulo}</h4>
                           <p className="text-xs text-muted-foreground mt-1">{item.descricao}</p>
@@ -752,6 +848,11 @@ const SprintPlanning = () => {
                         
                         <div className="flex gap-2 flex-wrap">
                           <Badge variant="outline" className="text-xs">SP: {item.story_points}</Badge>
+                          {(item as any).tipo_produto && (
+                            <Badge variant="default" className="text-xs">
+                              {(item as any).tipo_produto}
+                            </Badge>
+                          )}
                           {sprintDaTarefa ? (
                             <Badge variant="secondary" className="text-xs">
                               Sprint: {sprintDaTarefa.nome}
@@ -765,7 +866,7 @@ const SprintPlanning = () => {
                           Responsável: {item.responsavel}
                         </p>
 
-                        <div className="flex gap-2">
+                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                           <Button 
                             onClick={() => handleAddToSprint(item.id)} 
                             size="sm" 
@@ -800,6 +901,121 @@ const SprintPlanning = () => {
             </CardContent>
           </Card>
       </div>
+
+      {/* Dialog de Edição */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Editar Tarefa</DialogTitle>
+          </DialogHeader>
+          
+          {editingTask && (
+            <div className="space-y-4">
+              <div>
+                <label className="text-sm font-medium">Título *</label>
+                <Input
+                  placeholder="Título da tarefa"
+                  value={editingTask.titulo}
+                  onChange={(e) => setEditingTask({ ...editingTask, titulo: e.target.value })}
+                  maxLength={200}
+                />
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Descrição</label>
+                <Input
+                  placeholder="Descrição da tarefa"
+                  value={editingTask.descricao || ''}
+                  onChange={(e) => setEditingTask({ ...editingTask, descricao: e.target.value })}
+                  maxLength={1000}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium">Story Points *</label>
+                  <Input
+                    type="number"
+                    min="1"
+                    max="100"
+                    value={editingTask.story_points}
+                    onChange={(e) => setEditingTask({ ...editingTask, story_points: parseInt(e.target.value) || 1 })}
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Prioridade *</label>
+                  <Select 
+                    value={editingTask.prioridade} 
+                    onValueChange={(value: 'baixa' | 'media' | 'alta') => setEditingTask({ ...editingTask, prioridade: value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="baixa">Baixa</SelectItem>
+                      <SelectItem value="media">Média</SelectItem>
+                      <SelectItem value="alta">Alta</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Responsável *</label>
+                <Select 
+                  value={editingTask.responsavel || undefined} 
+                  onValueChange={(value) => setEditingTask({ ...editingTask, responsavel: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um responsável" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {profiles.map((profile) => (
+                      <SelectItem key={profile.id} value={profile.nome}>
+                        {profile.nome}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Tipo de Produto</label>
+                <Select 
+                  value={editingTask.tipo_produto || undefined} 
+                  onValueChange={(value: 'Produto' | 'Projeto GHAS' | 'Projeto Inovemed') => setEditingTask({ ...editingTask, tipo_produto: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione o tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="Produto">Produto</SelectItem>
+                    <SelectItem value="Projeto GHAS">Projeto GHAS</SelectItem>
+                    <SelectItem value="Projeto Inovemed">Projeto Inovemed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex gap-2 pt-4">
+                <Button onClick={handleUpdateTask} className="flex-1">
+                  Salvar Alterações
+                </Button>
+                <Button
+                  onClick={() => {
+                    setIsEditDialogOpen(false);
+                    setEditingTask(null);
+                  }}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancelar
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </Layout>
   );
 };
