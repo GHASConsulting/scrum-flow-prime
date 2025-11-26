@@ -10,6 +10,10 @@ import Daily from "./pages/Daily";
 import HistoricoDaily from "./pages/HistoricoDaily";
 import Retrospectiva from "./pages/Retrospectiva";
 import Projetos from "./pages/Projetos";
+import RoadmapGeral from "./pages/RoadmapGeral";
+import RoadmapProdutos from "./pages/RoadmapProdutos";
+import RoadmapGHAS from "./pages/RoadmapGHAS";
+import RoadmapInovemed from "./pages/RoadmapInovemed";
 import Auth from "./pages/Auth";
 import Administracao from "./pages/Administracao";
 import RegistrosAcessos from "./pages/RegistrosAcessos";
@@ -33,6 +37,10 @@ function App() {
           <Route path="/daily/historico" element={<ProtectedRoute><HistoricoDaily /></ProtectedRoute>} />
           <Route path="/retrospectiva" element={<ProtectedRoute><Retrospectiva /></ProtectedRoute>} />
           <Route path="/projetos" element={<ProtectedRoute><Projetos /></ProtectedRoute>} />
+          <Route path="/roadmap" element={<ProtectedRoute><RoadmapGeral /></ProtectedRoute>} />
+          <Route path="/roadmap/produtos" element={<ProtectedRoute><RoadmapProdutos /></ProtectedRoute>} />
+          <Route path="/roadmap/ghas" element={<ProtectedRoute><RoadmapGHAS /></ProtectedRoute>} />
+          <Route path="/roadmap/inovemed" element={<ProtectedRoute><RoadmapInovemed /></ProtectedRoute>} />
           <Route path="/administracao" element={<ProtectedRoute><Administracao /></ProtectedRoute>} />
           <Route path="/registros-acessos" element={<ProtectedRoute><RegistrosAcessos /></ProtectedRoute>} />
           <Route path="/dados-ava" element={<ProtectedRoute><DadosAVA /></ProtectedRoute>} />
