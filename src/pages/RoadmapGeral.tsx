@@ -1,24 +1,22 @@
 import { useState, useMemo } from 'react';
 import { Layout } from '@/components/Layout';
-import { useRoadmap } from '@/hooks/useRoadmap';
+import { useRoadmapTarefas } from '@/hooks/useRoadmapTarefas';
 import { RoadmapKPIs } from '@/components/roadmap/RoadmapKPIs';
 import { RoadmapFilters } from '@/components/roadmap/RoadmapFilters';
 import { RoadmapTable } from '@/components/roadmap/RoadmapTable';
 import { RoadmapExport } from '@/components/roadmap/RoadmapExport';
-import { AddKRDialog } from '@/components/roadmap/AddKRDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
-import { calculateKPIs } from '@/lib/roadmapStatus';
 import { useNavigate } from 'react-router-dom';
 
 export default function RoadmapGeral() {
-  const { roadmapItems, loading } = useRoadmap();
+  const { tarefas, loading } = useRoadmapTarefas();
   const navigate = useNavigate();
   
-  const [searchKR, setSearchKR] = useState('');
+  const [searchTarefa, setSearchTarefa] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
-  const [atorFilter, setAtorFilter] = useState('todos');
+  const [responsavelFilter, setResponsavelFilter] = useState('todos');
   const [tipoFilter, setTipoFilter] = useState('todos');
   
   const [produtosExpanded, setProdutosExpanded] = useState(true);
@@ -26,39 +24,64 @@ export default function RoadmapGeral() {
   const [innovemedExpanded, setInnovemedExpanded] = useState(true);
 
   const filteredItems = useMemo(() => {
-    return roadmapItems.filter(item => {
-      const matchKR = item.kr.toLowerCase().includes(searchKR.toLowerCase());
-      const matchStatus = statusFilter === 'todos' || item.status === statusFilter;
-      const matchAtor = atorFilter === 'todos' || item.atores?.includes(atorFilter);
+    return tarefas.filter(item => {
+      const matchTarefa = item.titulo.toLowerCase().includes(searchTarefa.toLowerCase());
+      
+      let itemStatus = 'NAO_INICIADO';
+      if (item.subtarefas.length > 0) {
+        const concluidas = item.subtarefas.filter(s => s.status === 'done' || s.status === 'validated').length;
+        if (concluidas === item.subtarefas.length) itemStatus = 'DESENVOLVIDO';
+        else if (concluidas > 0) itemStatus = 'EM_DESENVOLVIMENTO';
+      }
+      
+      const matchStatus = statusFilter === 'todos' || itemStatus === statusFilter;
+      const matchResponsavel = responsavelFilter === 'todos' || item.responsavel === responsavelFilter;
       const matchTipo = tipoFilter === 'todos' || item.tipo_produto === tipoFilter;
       
-      return matchKR && matchStatus && matchAtor && matchTipo;
+      return matchTarefa && matchStatus && matchResponsavel && matchTipo;
     });
-  }, [roadmapItems, searchKR, statusFilter, atorFilter, tipoFilter]);
+  }, [tarefas, searchTarefa, statusFilter, responsavelFilter, tipoFilter]);
 
   const produtos = useMemo(() => filteredItems.filter(i => i.tipo_produto === 'Produto'), [filteredItems]);
   const ghas = useMemo(() => filteredItems.filter(i => i.tipo_produto === 'Projeto GHAS'), [filteredItems]);
   const inovemed = useMemo(() => filteredItems.filter(i => i.tipo_produto === 'Projeto Inovemed'), [filteredItems]);
 
-  const kpisProdutos = calculateKPIs(produtos);
-  const kpisGhas = calculateKPIs(ghas);
-  const kpisInovemed = calculateKPIs(inovemed);
-  const kpisGeral = calculateKPIs(filteredItems);
+  const calculateKPIsForItems = (items: typeof tarefas) => {
+    const total = items.length;
+    const concluidos = items.filter(item => {
+      const concluidasCount = item.subtarefas.filter(s => s.status === 'done' || s.status === 'validated').length;
+      return item.subtarefas.length > 0 && concluidasCount === item.subtarefas.length;
+    }).length;
+    
+    return {
+      total,
+      concluidos,
+      percentualConcluido: total > 0 ? Math.round((concluidos / total) * 100) : 0,
+      tempoMedioReal: 0,
+      atrasoMedio: 0,
+    };
+  };
 
-  const atoresUnicos = useMemo(() => {
-    const atores = new Set<string>();
-    roadmapItems.forEach(item => {
-      if (item.atores) {
-        item.atores.split(',').forEach(ator => atores.add(ator.trim()));
-      }
+  const kpisProdutos = calculateKPIsForItems(produtos);
+  const kpisGhas = calculateKPIsForItems(ghas);
+  const kpisInovemed = calculateKPIsForItems(inovemed);
+  const kpisGeral = calculateKPIsForItems(filteredItems);
+
+  const responsaveisUnicos = useMemo(() => {
+    const responsaveis = new Set<string>();
+    tarefas.forEach(item => {
+      if (item.responsavel) responsaveis.add(item.responsavel);
+      item.subtarefas.forEach(sub => {
+        if (sub.responsavel) responsaveis.add(sub.responsavel);
+      });
     });
-    return Array.from(atores).sort();
-  }, [roadmapItems]);
+    return Array.from(responsaveis).sort();
+  }, [tarefas]);
 
   const handleClearFilters = () => {
-    setSearchKR('');
+    setSearchTarefa('');
     setStatusFilter('todos');
-    setAtorFilter('todos');
+    setResponsavelFilter('todos');
     setTipoFilter('todos');
   };
 
@@ -78,24 +101,23 @@ export default function RoadmapGeral() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold">Roadmap Geral</h1>
-            <p className="text-muted-foreground">Visão completa de todos os produtos e projetos</p>
+            <p className="text-muted-foreground">Visão completa de todas as tarefas e projetos</p>
           </div>
-          <AddKRDialog />
         </div>
 
         <RoadmapKPIs {...kpisGeral} />
 
         <RoadmapFilters
-          searchKR={searchKR}
-          onSearchKRChange={setSearchKR}
+          searchKR={searchTarefa}
+          onSearchKRChange={setSearchTarefa}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
-          atorFilter={atorFilter}
-          onAtorFilterChange={setAtorFilter}
+          atorFilter={responsavelFilter}
+          onAtorFilterChange={setResponsavelFilter}
           tipoFilter={tipoFilter}
           onTipoFilterChange={setTipoFilter}
           onClearFilters={handleClearFilters}
-          atoresUnicos={atoresUnicos}
+          atoresUnicos={responsaveisUnicos}
           showTipoFilter={true}
         />
 
@@ -112,7 +134,7 @@ export default function RoadmapGeral() {
                 </CardTitle>
               </div>
               <div className="flex gap-2">
-                <RoadmapExport items={produtos} titulo="Roadmap_Produtos" />
+                <RoadmapExport items={produtos as any} titulo="Roadmap_Produtos" />
                 <Button
                   variant="outline"
                   size="sm"
@@ -151,7 +173,7 @@ export default function RoadmapGeral() {
                 </CardTitle>
               </div>
               <div className="flex gap-2">
-                <RoadmapExport items={ghas} titulo="Roadmap_GHAS" />
+                <RoadmapExport items={ghas as any} titulo="Roadmap_GHAS" />
                 <Button
                   variant="outline"
                   size="sm"
@@ -190,7 +212,7 @@ export default function RoadmapGeral() {
                 </CardTitle>
               </div>
               <div className="flex gap-2">
-                <RoadmapExport items={inovemed} titulo="Roadmap_Inovemed" />
+                <RoadmapExport items={inovemed as any} titulo="Roadmap_Inovemed" />
                 <Button
                   variant="outline"
                   size="sm"

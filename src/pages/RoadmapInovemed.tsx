@@ -1,51 +1,72 @@
 import { useState, useMemo } from 'react';
 import { Layout } from '@/components/Layout';
-import { useRoadmap } from '@/hooks/useRoadmap';
+import { useRoadmapTarefas } from '@/hooks/useRoadmapTarefas';
 import { RoadmapKPIs } from '@/components/roadmap/RoadmapKPIs';
 import { RoadmapFilters } from '@/components/roadmap/RoadmapFilters';
 import { RoadmapTable } from '@/components/roadmap/RoadmapTable';
 import { RoadmapExport } from '@/components/roadmap/RoadmapExport';
-import { AddKRDialog } from '@/components/roadmap/AddKRDialog';
-import { calculateKPIs } from '@/lib/roadmapStatus';
 
 export default function RoadmapInovemed() {
-  const { roadmapItems, loading } = useRoadmap();
+  const { tarefas, loading } = useRoadmapTarefas();
   
-  const [searchKR, setSearchKR] = useState('');
+  const [searchTarefa, setSearchTarefa] = useState('');
   const [statusFilter, setStatusFilter] = useState('todos');
-  const [atorFilter, setAtorFilter] = useState('todos');
+  const [responsavelFilter, setResponsavelFilter] = useState('todos');
 
   const inovemed = useMemo(() => 
-    roadmapItems.filter(i => i.tipo_produto === 'Projeto Inovemed'), 
-    [roadmapItems]
+    tarefas.filter(t => t.tipo_produto === 'Projeto Inovemed'), 
+    [tarefas]
   );
 
   const filteredItems = useMemo(() => {
     return inovemed.filter(item => {
-      const matchKR = item.kr.toLowerCase().includes(searchKR.toLowerCase());
-      const matchStatus = statusFilter === 'todos' || item.status === statusFilter;
-      const matchAtor = atorFilter === 'todos' || item.atores?.includes(atorFilter);
+      const matchTarefa = item.titulo.toLowerCase().includes(searchTarefa.toLowerCase());
       
-      return matchKR && matchStatus && matchAtor;
-    });
-  }, [inovemed, searchKR, statusFilter, atorFilter]);
-
-  const kpis = calculateKPIs(filteredItems);
-
-  const atoresUnicos = useMemo(() => {
-    const atores = new Set<string>();
-    inovemed.forEach(item => {
-      if (item.atores) {
-        item.atores.split(',').forEach(ator => atores.add(ator.trim()));
+      let itemStatus = 'NAO_INICIADO';
+      if (item.subtarefas.length > 0) {
+        const concluidas = item.subtarefas.filter(s => s.status === 'done' || s.status === 'validated').length;
+        if (concluidas === item.subtarefas.length) itemStatus = 'DESENVOLVIDO';
+        else if (concluidas > 0) itemStatus = 'EM_DESENVOLVIMENTO';
       }
+      
+      const matchStatus = statusFilter === 'todos' || itemStatus === statusFilter;
+      const matchResponsavel = responsavelFilter === 'todos' || item.responsavel === responsavelFilter;
+      
+      return matchTarefa && matchStatus && matchResponsavel;
     });
-    return Array.from(atores).sort();
+  }, [inovemed, searchTarefa, statusFilter, responsavelFilter]);
+
+  const kpis = useMemo(() => {
+    const total = filteredItems.length;
+    const concluidos = filteredItems.filter(item => {
+      const concluidasCount = item.subtarefas.filter(s => s.status === 'done' || s.status === 'validated').length;
+      return item.subtarefas.length > 0 && concluidasCount === item.subtarefas.length;
+    }).length;
+    
+    return {
+      total,
+      concluidos,
+      percentualConcluido: total > 0 ? Math.round((concluidos / total) * 100) : 0,
+      tempoMedioReal: 0,
+      atrasoMedio: 0,
+    };
+  }, [filteredItems]);
+
+  const responsaveisUnicos = useMemo(() => {
+    const responsaveis = new Set<string>();
+    inovemed.forEach(item => {
+      if (item.responsavel) responsaveis.add(item.responsavel);
+      item.subtarefas.forEach(sub => {
+        if (sub.responsavel) responsaveis.add(sub.responsavel);
+      });
+    });
+    return Array.from(responsaveis).sort();
   }, [inovemed]);
 
   const handleClearFilters = () => {
-    setSearchKR('');
+    setSearchTarefa('');
     setStatusFilter('todos');
-    setAtorFilter('todos');
+    setResponsavelFilter('todos');
   };
 
   if (loading) {
@@ -64,27 +85,24 @@ export default function RoadmapInovemed() {
         <div className="flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold">🟧 Roadmap de Projetos Inovemed</h1>
-            <p className="text-muted-foreground">Acompanhamento detalhado dos projetos Inovemed</p>
+            <p className="text-muted-foreground">Tarefas e subtarefas de projetos Inovemed</p>
           </div>
-          <div className="flex gap-2">
-            <AddKRDialog />
-            <RoadmapExport items={filteredItems} titulo="Roadmap_Inovemed" />
-          </div>
+          <RoadmapExport items={filteredItems as any} titulo="Roadmap_Inovemed" />
         </div>
 
         <RoadmapKPIs {...kpis} />
 
         <RoadmapFilters
-          searchKR={searchKR}
-          onSearchKRChange={setSearchKR}
+          searchKR={searchTarefa}
+          onSearchKRChange={setSearchTarefa}
           statusFilter={statusFilter}
           onStatusFilterChange={setStatusFilter}
-          atorFilter={atorFilter}
-          onAtorFilterChange={setAtorFilter}
+          atorFilter={responsavelFilter}
+          onAtorFilterChange={setResponsavelFilter}
           tipoFilter="todos"
           onTipoFilterChange={() => {}}
           onClearFilters={handleClearFilters}
-          atoresUnicos={atoresUnicos}
+          atoresUnicos={responsaveisUnicos}
           showTipoFilter={false}
         />
 
