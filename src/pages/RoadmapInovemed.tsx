@@ -5,6 +5,7 @@ import { RoadmapKPIs } from '@/components/roadmap/RoadmapKPIs';
 import { RoadmapFilters } from '@/components/roadmap/RoadmapFilters';
 import { RoadmapTable } from '@/components/roadmap/RoadmapTable';
 import { RoadmapExport } from '@/components/roadmap/RoadmapExport';
+import { AddKRDialog } from '@/components/roadmap/AddKRDialog';
 import { calculateKPIs } from '@/lib/roadmapStatus';
 
 export default function RoadmapInovemed() {
@@ -65,7 +66,10 @@ export default function RoadmapInovemed() {
             <h1 className="text-3xl font-bold">🟧 Roadmap de Projetos Inovemed</h1>
             <p className="text-muted-foreground">Acompanhamento detalhado dos projetos Inovemed</p>
           </div>
-          <RoadmapExport items={filteredItems} titulo="Roadmap_Inovemed" />
+          <div className="flex gap-2">
+            <AddKRDialog />
+            <RoadmapExport items={filteredItems} titulo="Roadmap_Inovemed" />
+          </div>
         </div>
 
         <RoadmapKPIs {...kpis} />

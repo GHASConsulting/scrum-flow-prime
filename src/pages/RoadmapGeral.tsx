@@ -5,6 +5,7 @@ import { RoadmapKPIs } from '@/components/roadmap/RoadmapKPIs';
 import { RoadmapFilters } from '@/components/roadmap/RoadmapFilters';
 import { RoadmapTable } from '@/components/roadmap/RoadmapTable';
 import { RoadmapExport } from '@/components/roadmap/RoadmapExport';
+import { AddKRDialog } from '@/components/roadmap/AddKRDialog';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
@@ -79,6 +80,7 @@ export default function RoadmapGeral() {
             <h1 className="text-3xl font-bold">Roadmap Geral</h1>
             <p className="text-muted-foreground">Visão completa de todos os produtos e projetos</p>
           </div>
+          <AddKRDialog />
         </div>
 
         <RoadmapKPIs {...kpisGeral} />
