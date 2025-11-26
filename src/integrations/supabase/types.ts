@@ -496,6 +496,57 @@ export type Database = {
           },
         ]
       }
+      roadmap: {
+        Row: {
+          atores: string | null
+          backlog_ids: string[] | null
+          created_at: string
+          data_fim_prevista: string | null
+          data_fim_real: string | null
+          data_inicio_prevista: string | null
+          data_inicio_real: string | null
+          descricao: string | null
+          id: string
+          kr: string
+          sprint_tarefa_ids: string[] | null
+          status: string | null
+          tipo_produto: string
+          updated_at: string
+        }
+        Insert: {
+          atores?: string | null
+          backlog_ids?: string[] | null
+          created_at?: string
+          data_fim_prevista?: string | null
+          data_fim_real?: string | null
+          data_inicio_prevista?: string | null
+          data_inicio_real?: string | null
+          descricao?: string | null
+          id?: string
+          kr: string
+          sprint_tarefa_ids?: string[] | null
+          status?: string | null
+          tipo_produto: string
+          updated_at?: string
+        }
+        Update: {
+          atores?: string | null
+          backlog_ids?: string[] | null
+          created_at?: string
+          data_fim_prevista?: string | null
+          data_fim_real?: string | null
+          data_inicio_prevista?: string | null
+          data_inicio_real?: string | null
+          descricao?: string | null
+          id?: string
+          kr?: string
+          sprint_tarefa_ids?: string[] | null
+          status?: string | null
+          tipo_produto?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       schedule_assignment: {
         Row: {
           allocation_pct: number | null
