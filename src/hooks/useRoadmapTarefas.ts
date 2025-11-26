@@ -71,35 +71,63 @@ export const useRoadmapTarefas = () => {
 
       if (subtarefasError) throw subtarefasError;
 
-      // Combinar os dados
-      const tarefasCompletas: RoadmapTarefa[] = (sprintTarefas || []).map((tarefa: any) => ({
-        id: tarefa.id,
-        sprint_id: tarefa.sprint_id,
-        backlog_id: tarefa.backlog_id,
-        status: tarefa.status,
-        responsavel: tarefa.responsavel,
-        created_at: tarefa.created_at,
-        updated_at: tarefa.updated_at,
-        titulo: tarefa.backlog?.titulo || 'Sem título',
-        descricao: tarefa.backlog?.descricao || null,
-        story_points: tarefa.backlog?.story_points || 0,
-        prioridade: tarefa.backlog?.prioridade || 'media',
-        tipo_produto: tarefa.backlog?.tipo_produto || null,
-        sprint_nome: tarefa.sprint?.nome || 'Sem sprint',
-        sprint_data_inicio: tarefa.sprint?.data_inicio || '',
-        sprint_data_fim: tarefa.sprint?.data_fim || '',
-        sprint_status: tarefa.sprint?.status || 'planejamento',
-        subtarefas: (subtarefas || [])
-          .filter((sub: any) => sub.sprint_tarefa_id === tarefa.id)
-          .map((sub: any) => ({
-            id: sub.id,
-            titulo: sub.titulo,
-            inicio: sub.inicio,
-            fim: sub.fim,
-            status: sub.status,
-            responsavel: sub.responsavel,
-          })),
-      }));
+      // Agrupar tarefas por backlog_id
+      const tarefasPorBacklog = new Map<string, any[]>();
+      
+      (sprintTarefas || []).forEach((tarefa: any) => {
+        const backlogId = tarefa.backlog_id;
+        if (!tarefasPorBacklog.has(backlogId)) {
+          tarefasPorBacklog.set(backlogId, []);
+        }
+        tarefasPorBacklog.get(backlogId)!.push(tarefa);
+      });
+
+      // Criar tarefas agregadas
+      const tarefasCompletas: RoadmapTarefa[] = Array.from(tarefasPorBacklog.entries()).map(([backlogId, tarefas]) => {
+        // Pegar a primeira tarefa como base
+        const primeiraTarefa = tarefas[0];
+        
+        // Calcular primeira data de início e última data de fim
+        const datasInicio = tarefas.map(t => new Date(t.sprint?.data_inicio || '').getTime()).filter(d => !isNaN(d));
+        const datasFim = tarefas.map(t => new Date(t.sprint?.data_fim || '').getTime()).filter(d => !isNaN(d));
+        
+        const primeiraDataInicio = datasInicio.length > 0 ? new Date(Math.min(...datasInicio)).toISOString() : '';
+        const ultimaDataFim = datasFim.length > 0 ? new Date(Math.max(...datasFim)).toISOString() : '';
+        
+        // Coletar todas as subtarefas de todas as sprint_tarefas deste backlog
+        const todasSubtarefas = tarefas.flatMap(tarefa => 
+          (subtarefas || [])
+            .filter((sub: any) => sub.sprint_tarefa_id === tarefa.id)
+            .map((sub: any) => ({
+              id: sub.id,
+              titulo: sub.titulo,
+              inicio: sub.inicio,
+              fim: sub.fim,
+              status: sub.status,
+              responsavel: sub.responsavel,
+            }))
+        );
+        
+        return {
+          id: primeiraTarefa.id,
+          sprint_id: primeiraTarefa.sprint_id,
+          backlog_id: backlogId,
+          status: primeiraTarefa.status,
+          responsavel: primeiraTarefa.responsavel,
+          created_at: primeiraTarefa.created_at,
+          updated_at: primeiraTarefa.updated_at,
+          titulo: primeiraTarefa.backlog?.titulo || 'Sem título',
+          descricao: primeiraTarefa.backlog?.descricao || null,
+          story_points: primeiraTarefa.backlog?.story_points || 0,
+          prioridade: primeiraTarefa.backlog?.prioridade || 'media',
+          tipo_produto: primeiraTarefa.backlog?.tipo_produto || null,
+          sprint_nome: '',
+          sprint_data_inicio: primeiraDataInicio,
+          sprint_data_fim: ultimaDataFim,
+          sprint_status: primeiraTarefa.sprint?.status || 'planejamento',
+          subtarefas: todasSubtarefas,
+        };
+      });
 
       setTarefas(tarefasCompletas);
     } catch (error) {
