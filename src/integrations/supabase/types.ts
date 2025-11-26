@@ -56,6 +56,7 @@ export type Database = {
           responsavel: string | null
           status: string
           story_points: number
+          tipo_produto: string | null
           titulo: string
           updated_at: string
         }
@@ -67,6 +68,7 @@ export type Database = {
           responsavel?: string | null
           status: string
           story_points: number
+          tipo_produto?: string | null
           titulo: string
           updated_at?: string
         }
@@ -78,6 +80,7 @@ export type Database = {
           responsavel?: string | null
           status?: string
           story_points?: number
+          tipo_produto?: string | null
           titulo?: string
           updated_at?: string
         }
