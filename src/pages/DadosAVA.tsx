@@ -102,6 +102,9 @@ const DadosAVA = () => {
     const alteracaoSenha = filteredEventos.filter(e => e.ds_tipo?.toLowerCase().includes('senha'));
     const alteracaoSenhaSolucionadas = alteracaoSenha.filter(e => e.ie_status === 'success');
     const alteracaoSenhaNaoSolucionadas = alteracaoSenha.filter(e => e.ie_status !== 'success');
+    const outros = filteredEventos.filter(e => e.ds_tipo?.toLowerCase().includes('outros'));
+    const outrosSolucionados = outros.filter(e => e.ie_status === 'success');
+    const outrosNaoSolucionados = outros.filter(e => e.ie_status !== 'success');
 
     return {
       total: filteredEventos.length,
@@ -111,6 +114,9 @@ const DadosAVA = () => {
       alteracaoSenha: alteracaoSenha.length,
       alteracaoSenhaSolucionadas: alteracaoSenhaSolucionadas.length,
       alteracaoSenhaNaoSolucionadas: alteracaoSenhaNaoSolucionadas.length,
+      outros: outros.length,
+      outrosSolucionados: outrosSolucionados.length,
+      outrosNaoSolucionados: outrosNaoSolucionados.length,
     };
   }, [filteredEventos]);
 
@@ -126,10 +132,7 @@ const DadosAVA = () => {
     <Layout>
       <div className="space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Dados AVA</h1>
-          <p className="text-muted-foreground">
-            Painel de indicadores alimentado pelo BotConversa
-          </p>
+          <h1 className="text-3xl font-bold">Painel de Indicadores de Interação da AVA</h1>
         </div>
 
         {/* Filtros */}
@@ -291,6 +294,39 @@ const DadosAVA = () => {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{stats.alteracaoSenhaNaoSolucionadas}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* 4ª Linha: Outros */}
+        <div className="grid gap-4 md:grid-cols-3">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total de Registros de Outros</CardTitle>
+              <Activity className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.outros}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Outros Solucionados pela AVA</CardTitle>
+              <CheckCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.outrosSolucionados}</div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Outros Não Solucionados pela AVA</CardTitle>
+              <XCircle className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.outrosNaoSolucionados}</div>
             </CardContent>
           </Card>
         </div>
