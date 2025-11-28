@@ -10,7 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import type { DateRange } from "react-day-picker";
 import { useAvaEventos } from "@/hooks/useAvaEventos";
-import { format } from "date-fns";
+import { format, parse, startOfDay, endOfDay, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   AlertDialog,
@@ -76,17 +76,15 @@ const DadosAVA = () => {
       
       // Filtro de data
       if (dateRange?.from) {
-        const eventoDate = new Date(evento.dt_registro);
-        eventoDate.setHours(0, 0, 0, 0);
-        const fromDate = new Date(dateRange.from);
-        fromDate.setHours(0, 0, 0, 0);
+        // Parse da data do evento (formato: 'YYYY-MM-DD HH:MM:SS')
+        const eventoDateStr = evento.dt_registro.substring(0, 10); // Pega apenas YYYY-MM-DD
+        const eventoDate = parse(eventoDateStr, 'yyyy-MM-dd', new Date());
         
-        if (eventoDate < fromDate) return false;
+        const fromDate = startOfDay(dateRange.from);
+        const toDate = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
         
-        if (dateRange.to) {
-          const toDate = new Date(dateRange.to);
-          toDate.setHours(23, 59, 59, 999);
-          if (eventoDate > toDate) return false;
+        if (!isWithinInterval(eventoDate, { start: fromDate, end: toDate })) {
+          return false;
         }
       }
       
