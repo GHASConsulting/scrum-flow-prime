@@ -296,11 +296,11 @@ const DadosAVA = () => {
           </Card>
         </div>
 
-        {/* 4ª Linha: Outros */}
+        {/* 4ª Linha: Encaminhados */}
         <div className="grid gap-4 md:grid-cols-3">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total de Registros de Outros</CardTitle>
+              <CardTitle className="text-sm font-medium">Total de Registros Encaminhado</CardTitle>
               <Activity className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -310,7 +310,7 @@ const DadosAVA = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Outros Solucionados pela AVA</CardTitle>
+              <CardTitle className="text-sm font-medium">Encaminhados com Sucesso pela AVA</CardTitle>
               <CheckCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -320,7 +320,7 @@ const DadosAVA = () => {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Outros Não Solucionados pela AVA</CardTitle>
+              <CardTitle className="text-sm font-medium">Não Encaminhados pela AVA</CardTitle>
               <XCircle className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
