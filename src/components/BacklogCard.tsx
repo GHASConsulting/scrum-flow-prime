@@ -177,7 +177,7 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
                 <Badge variant="outline" className={`text-xs border ${prioridadeColors[item.prioridade]}`}>
                   {prioridadeLabels[item.prioridade]}
                 </Badge>
-                {canAddSubtarefas && subtarefasDaTarefa.length > 0 && (
+                {subtarefasDaTarefa.length > 0 && (
                   <Badge variant="outline" className="text-xs">
                     {subtarefasDaTarefa.filter(s => s.status === 'done').length}/{subtarefasDaTarefa.length} subtarefas
                   </Badge>
@@ -217,7 +217,7 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
         </CardContent>
       </Card>
 
-      {canAddSubtarefas && (
+      {(canAddSubtarefas || subtarefasDaTarefa.length > 0) && (
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{item.titulo}</DialogTitle>
@@ -283,95 +283,97 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
               </CollapsibleContent>
             </Collapsible>
 
-            <div className="border-t pt-4">
-              <Collapsible open={isNovaSubtarefaOpen} onOpenChange={setIsNovaSubtarefaOpen}>
-                <CollapsibleTrigger asChild>
-                  <Button variant="ghost" className="w-full justify-between p-0 hover:bg-transparent">
-                    <h4 className="font-semibold">Nova Subtarefa</h4>
-                    {isNovaSubtarefaOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                  </Button>
-                </CollapsibleTrigger>
-                
-                <CollapsibleContent className="mt-3">
-                  <div className="space-y-3">
-                    <div>
-                      <Label>Tarefa *</Label>
-                      <Input
-                        value={newSubtarefa.titulo}
-                        onChange={(e) => setNewSubtarefa({ ...newSubtarefa, titulo: e.target.value })}
-                        placeholder="Digite o título da subtarefa"
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Responsável</Label>
-                      <Input
-                        value={newSubtarefa.responsavel}
-                        onChange={(e) => setNewSubtarefa({ ...newSubtarefa, responsavel: e.target.value })}
-                        placeholder="Nome do responsável"
-                      />
-                    </div>
-
-                    <div>
-                      <Label>Data Início *</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !newSubtarefa.inicio && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {newSubtarefa.inicio ? format(newSubtarefa.inicio, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecione a data'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={newSubtarefa.inicio}
-                            onSelect={(date) => setNewSubtarefa({ ...newSubtarefa, inicio: date })}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    <div>
-                      <Label>Data Fim *</Label>
-                      <Popover>
-                        <PopoverTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            className={cn(
-                              "w-full justify-start text-left font-normal",
-                              !newSubtarefa.fim && "text-muted-foreground"
-                            )}
-                          >
-                            <CalendarIcon className="mr-2 h-4 w-4" />
-                            {newSubtarefa.fim ? format(newSubtarefa.fim, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecione a data'}
-                          </Button>
-                        </PopoverTrigger>
-                        <PopoverContent className="w-auto p-0" align="start">
-                          <Calendar
-                            mode="single"
-                            selected={newSubtarefa.fim}
-                            onSelect={(date) => setNewSubtarefa({ ...newSubtarefa, fim: date })}
-                            initialFocus
-                          />
-                        </PopoverContent>
-                      </Popover>
-                    </div>
-
-                    <Button onClick={handleAddSubtarefa} className="w-full">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Adicionar Subtarefa
+            {canAddSubtarefas && (
+              <div className="border-t pt-4">
+                <Collapsible open={isNovaSubtarefaOpen} onOpenChange={setIsNovaSubtarefaOpen}>
+                  <CollapsibleTrigger asChild>
+                    <Button variant="ghost" className="w-full justify-between p-0 hover:bg-transparent">
+                      <h4 className="font-semibold">Nova Subtarefa</h4>
+                      {isNovaSubtarefaOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                     </Button>
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-            </div>
+                  </CollapsibleTrigger>
+                  
+                  <CollapsibleContent className="mt-3">
+                    <div className="space-y-3">
+                      <div>
+                        <Label>Tarefa *</Label>
+                        <Input
+                          value={newSubtarefa.titulo}
+                          onChange={(e) => setNewSubtarefa({ ...newSubtarefa, titulo: e.target.value })}
+                          placeholder="Digite o título da subtarefa"
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Responsável</Label>
+                        <Input
+                          value={newSubtarefa.responsavel}
+                          onChange={(e) => setNewSubtarefa({ ...newSubtarefa, responsavel: e.target.value })}
+                          placeholder="Nome do responsável"
+                        />
+                      </div>
+
+                      <div>
+                        <Label>Data Início *</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !newSubtarefa.inicio && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {newSubtarefa.inicio ? format(newSubtarefa.inicio, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecione a data'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={newSubtarefa.inicio}
+                              onSelect={(date) => setNewSubtarefa({ ...newSubtarefa, inicio: date })}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      <div>
+                        <Label>Data Fim *</Label>
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <Button 
+                              variant="outline" 
+                              className={cn(
+                                "w-full justify-start text-left font-normal",
+                                !newSubtarefa.fim && "text-muted-foreground"
+                              )}
+                            >
+                              <CalendarIcon className="mr-2 h-4 w-4" />
+                              {newSubtarefa.fim ? format(newSubtarefa.fim, 'dd/MM/yyyy', { locale: ptBR }) : 'Selecione a data'}
+                            </Button>
+                          </PopoverTrigger>
+                          <PopoverContent className="w-auto p-0" align="start">
+                            <Calendar
+                              mode="single"
+                              selected={newSubtarefa.fim}
+                              onSelect={(date) => setNewSubtarefa({ ...newSubtarefa, fim: date })}
+                              initialFocus
+                            />
+                          </PopoverContent>
+                        </Popover>
+                      </div>
+
+                      <Button onClick={handleAddSubtarefa} className="w-full">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Adicionar Subtarefa
+                      </Button>
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            )}
           </div>
         </DialogContent>
       )}
