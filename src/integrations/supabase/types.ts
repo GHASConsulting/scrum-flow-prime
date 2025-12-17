@@ -783,39 +783,49 @@ export type Database = {
       }
       subtarefas: {
         Row: {
+          backlog_id: string
           created_at: string
           fim: string
           id: string
           inicio: string
           responsavel: string | null
-          sprint_tarefa_id: string
+          sprint_tarefa_id: string | null
           status: string | null
           titulo: string
           updated_at: string
         }
         Insert: {
+          backlog_id: string
           created_at?: string
           fim: string
           id?: string
           inicio: string
           responsavel?: string | null
-          sprint_tarefa_id: string
+          sprint_tarefa_id?: string | null
           status?: string | null
           titulo: string
           updated_at?: string
         }
         Update: {
+          backlog_id?: string
           created_at?: string
           fim?: string
           id?: string
           inicio?: string
           responsavel?: string | null
-          sprint_tarefa_id?: string
+          sprint_tarefa_id?: string | null
           status?: string | null
           titulo?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "subtarefas_backlog_id_fkey"
+            columns: ["backlog_id"]
+            isOneToOne: false
+            referencedRelation: "backlog"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "subtarefas_sprint_tarefa_id_fkey"
             columns: ["sprint_tarefa_id"]

@@ -49,10 +49,8 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
   // Obter a sprint associada
   const sprint = sprintTarefa ? sprints.find(s => s.id === sprintTarefa.sprint_id) : null;
   
-  // Filtrar subtarefas desta tarefa
-  const subtarefasDaTarefaRaw = sprintTarefa 
-    ? subtarefas.filter(sub => sub.sprint_tarefa_id === sprintTarefa.id)
-    : [];
+  // Filtrar subtarefas desta tarefa pelo backlog_id (não mais por sprint_tarefa_id)
+  const subtarefasDaTarefaRaw = subtarefas.filter(sub => sub.backlog_id === item.id);
 
   // Ordenar subtarefas
   const subtarefasDaTarefa = [...subtarefasDaTarefaRaw].sort((a, b) => {
@@ -99,6 +97,7 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
       dataFim.setHours(23, 59, 59, 999);
       
       await addSubtarefa({
+        backlog_id: sprintTarefa.backlog_id,
         sprint_tarefa_id: sprintTarefa.id,
         titulo: newSubtarefa.titulo.trim(),
         responsavel: newSubtarefa.responsavel?.trim() || null,

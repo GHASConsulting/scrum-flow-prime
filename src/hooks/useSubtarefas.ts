@@ -28,6 +28,10 @@ export const useSubtarefas = () => {
     }
   };
 
+  const getSubtarefasByBacklogId = (backlogId: string) => {
+    return subtarefas.filter(s => s.backlog_id === backlogId);
+  };
+
   const addSubtarefa = async (subtarefa: SubtarefaInsert) => {
     try {
       const { data, error } = await supabase
@@ -95,5 +99,5 @@ export const useSubtarefas = () => {
     };
   }, []);
 
-  return { subtarefas, loading, addSubtarefa, updateSubtarefa, deleteSubtarefa, loadSubtarefas };
+  return { subtarefas, loading, addSubtarefa, updateSubtarefa, deleteSubtarefa, loadSubtarefas, getSubtarefasByBacklogId };
 };

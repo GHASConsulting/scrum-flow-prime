@@ -94,19 +94,17 @@ export const useRoadmapTarefas = () => {
         const primeiraDataInicio = datasInicio.length > 0 ? new Date(Math.min(...datasInicio)).toISOString() : '';
         const ultimaDataFim = datasFim.length > 0 ? new Date(Math.max(...datasFim)).toISOString() : '';
         
-        // Coletar todas as subtarefas de todas as sprint_tarefas deste backlog
-        const todasSubtarefas = tarefas.flatMap(tarefa => 
-          (subtarefas || [])
-            .filter((sub: any) => sub.sprint_tarefa_id === tarefa.id)
-            .map((sub: any) => ({
-              id: sub.id,
-              titulo: sub.titulo,
-              inicio: sub.inicio,
-              fim: sub.fim,
-              status: sub.status,
-              responsavel: sub.responsavel,
-            }))
-        );
+        // Coletar subtarefas diretamente pelo backlog_id
+        const todasSubtarefas = (subtarefas || [])
+          .filter((sub: any) => sub.backlog_id === backlogId)
+          .map((sub: any) => ({
+            id: sub.id,
+            titulo: sub.titulo,
+            inicio: sub.inicio,
+            fim: sub.fim,
+            status: sub.status,
+            responsavel: sub.responsavel,
+          }));
         
         return {
           id: primeiraTarefa.id,
