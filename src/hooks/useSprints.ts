@@ -69,6 +69,24 @@ export const useSprints = () => {
     }
   };
 
+  const deleteSprint = async (id: string) => {
+    try {
+      const { error } = await supabase
+        .from('sprint')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      
+      setSprints(prev => prev.filter(s => s.id !== id));
+      toast.success('Sprint excluída com sucesso');
+    } catch (error) {
+      console.error('Erro ao excluir sprint:', error);
+      toast.error('Erro ao excluir sprint');
+      throw error;
+    }
+  };
+
   useEffect(() => {
     loadSprints();
 
@@ -84,5 +102,5 @@ export const useSprints = () => {
     };
   }, []);
 
-  return { sprints, loading, addSprint, updateSprint, loadSprints };
+  return { sprints, loading, addSprint, updateSprint, deleteSprint, loadSprints };
 };
