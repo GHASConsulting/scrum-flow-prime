@@ -25,7 +25,7 @@ import type { Tables } from '@/integrations/supabase/types';
 
 const SprintPlanning = () => {
   const { backlog, addBacklogItem, updateBacklogItem, deleteBacklogItem } = useBacklog();
-  const { sprints, addSprint, updateSprint } = useSprints();
+  const { sprints, addSprint, updateSprint, deleteSprint } = useSprints();
   const { sprintTarefas, addSprintTarefa: addTarefaToSprint, deleteSprintTarefa } = useSprintTarefas();
   const { profiles } = useProfiles();
   
@@ -482,6 +482,34 @@ const SprintPlanning = () => {
                                 Alterar Datas
                               </Button>
                             )}
+
+                            {/* Botão Deletar Sprint */}
+                            {(() => {
+                              const tarefasNaSprint = sprintTarefas.filter(st => st.sprint_id === selectedSprintData.id);
+                              const podeDeletar = tarefasNaSprint.length === 0;
+                              return (
+                                <Button 
+                                  onClick={async () => {
+                                    if (!podeDeletar) {
+                                      toast.error('Não é possível excluir: existem tarefas associadas a esta sprint');
+                                      return;
+                                    }
+                                    if (confirm(`Tem certeza que deseja excluir a sprint "${selectedSprintData.nome}"?`)) {
+                                      await deleteSprint(selectedSprintData.id);
+                                      setSelectedSprint('');
+                                    }
+                                  }}
+                                  size="sm"
+                                  variant="destructive"
+                                  className="w-full"
+                                  disabled={!podeDeletar}
+                                  title={!podeDeletar ? 'Remova todas as tarefas da sprint primeiro' : ''}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Excluir Sprint
+                                </Button>
+                              );
+                            })()}
                           </div>
                         </>
                       ) : (
