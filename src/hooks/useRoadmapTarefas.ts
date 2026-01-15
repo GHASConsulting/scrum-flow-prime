@@ -3,10 +3,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
 export interface RoadmapTarefa {
-  id: string;
-  sprint_id: string;
+  id: string; // backlog_id
   backlog_id: string;
-  status: string;
+  status_backlog: string; // status no backlog
   responsavel: string | null;
   created_at: string;
   updated_at: string;
@@ -16,11 +15,12 @@ export interface RoadmapTarefa {
   story_points: number;
   prioridade: string;
   tipo_produto: string | null;
-  // Dados da sprint
-  sprint_nome: string;
-  sprint_data_inicio: string;
-  sprint_data_fim: string;
-  sprint_status: string;
+  // Dados da sprint (se houver)
+  sprint_id: string | null;
+  sprint_nome: string | null;
+  sprint_data_inicio: string | null;
+  sprint_data_fim: string | null;
+  sprint_status: string | null;
   // Dados das subtarefas
   subtarefas: {
     id: string;
@@ -32,6 +32,13 @@ export interface RoadmapTarefa {
   }[];
 }
 
+export type RoadmapStatusType = 
+  | 'EM_SPRINT' 
+  | 'NAO_PLANEJADA' 
+  | 'EM_PLANEJAMENTO' 
+  | 'ENTREGUE' 
+  | 'EM_ATRASO';
+
 export const useRoadmapTarefas = () => {
   const [tarefas, setTarefas] = useState<RoadmapTarefa[]>([]);
   const [loading, setLoading] = useState(true);
@@ -40,19 +47,21 @@ export const useRoadmapTarefas = () => {
     try {
       setLoading(true);
       
-      // Buscar tarefas com JOIN para backlog e sprint
+      // Buscar TODOS os itens do backlog
+      const { data: backlogItems, error: backlogError } = await supabase
+        .from('backlog')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (backlogError) throw backlogError;
+
+      // Buscar todas as sprint_tarefas com dados da sprint
       const { data: sprintTarefas, error: tarefasError } = await supabase
         .from('sprint_tarefas')
         .select(`
           *,
-          backlog:backlog_id (
-            titulo,
-            descricao,
-            story_points,
-            prioridade,
-            tipo_produto
-          ),
           sprint:sprint_id (
+            id,
             nome,
             data_inicio,
             data_fim,
@@ -71,32 +80,35 @@ export const useRoadmapTarefas = () => {
 
       if (subtarefasError) throw subtarefasError;
 
-      // Agrupar tarefas por backlog_id
-      const tarefasPorBacklog = new Map<string, any[]>();
-      
+      // Agrupar sprint_tarefas por backlog_id
+      const sprintTarefasPorBacklog = new Map<string, any[]>();
       (sprintTarefas || []).forEach((tarefa: any) => {
         const backlogId = tarefa.backlog_id;
-        if (!tarefasPorBacklog.has(backlogId)) {
-          tarefasPorBacklog.set(backlogId, []);
+        if (!sprintTarefasPorBacklog.has(backlogId)) {
+          sprintTarefasPorBacklog.set(backlogId, []);
         }
-        tarefasPorBacklog.get(backlogId)!.push(tarefa);
+        sprintTarefasPorBacklog.get(backlogId)!.push(tarefa);
       });
 
-      // Criar tarefas agregadas
-      const tarefasCompletas: RoadmapTarefa[] = Array.from(tarefasPorBacklog.entries()).map(([backlogId, tarefas]) => {
-        // Pegar a primeira tarefa como base
-        const primeiraTarefa = tarefas[0];
+      // Criar tarefas baseadas no backlog
+      const tarefasCompletas: RoadmapTarefa[] = (backlogItems || []).map((backlog: any) => {
+        const sprintTarefasDoBacklog = sprintTarefasPorBacklog.get(backlog.id) || [];
         
-        // Calcular primeira data de início e última data de fim
-        const datasInicio = tarefas.map(t => new Date(t.sprint?.data_inicio || '').getTime()).filter(d => !isNaN(d));
-        const datasFim = tarefas.map(t => new Date(t.sprint?.data_fim || '').getTime()).filter(d => !isNaN(d));
-        
-        const primeiraDataInicio = datasInicio.length > 0 ? new Date(Math.min(...datasInicio)).toISOString() : '';
-        const ultimaDataFim = datasFim.length > 0 ? new Date(Math.max(...datasFim)).toISOString() : '';
-        
-        // Coletar subtarefas diretamente pelo backlog_id
-        const todasSubtarefas = (subtarefas || [])
-          .filter((sub: any) => sub.backlog_id === backlogId)
+        // Encontrar a sprint ativa ou a mais recente
+        let sprintAtiva = sprintTarefasDoBacklog.find((st: any) => st.sprint?.status === 'ativo');
+        if (!sprintAtiva && sprintTarefasDoBacklog.length > 0) {
+          // Ordenar por data de fim da sprint (mais recente primeiro)
+          sprintTarefasDoBacklog.sort((a: any, b: any) => {
+            const dateA = new Date(a.sprint?.data_fim || '').getTime();
+            const dateB = new Date(b.sprint?.data_fim || '').getTime();
+            return dateB - dateA;
+          });
+          sprintAtiva = sprintTarefasDoBacklog[0];
+        }
+
+        // Coletar subtarefas do backlog
+        const subtarefasDoBacklog = (subtarefas || [])
+          .filter((sub: any) => sub.backlog_id === backlog.id)
           .map((sub: any) => ({
             id: sub.id,
             titulo: sub.titulo,
@@ -105,25 +117,25 @@ export const useRoadmapTarefas = () => {
             status: sub.status,
             responsavel: sub.responsavel,
           }));
-        
+
         return {
-          id: primeiraTarefa.id,
-          sprint_id: primeiraTarefa.sprint_id,
-          backlog_id: backlogId,
-          status: primeiraTarefa.status,
-          responsavel: primeiraTarefa.responsavel,
-          created_at: primeiraTarefa.created_at,
-          updated_at: primeiraTarefa.updated_at,
-          titulo: primeiraTarefa.backlog?.titulo || 'Sem título',
-          descricao: primeiraTarefa.backlog?.descricao || null,
-          story_points: primeiraTarefa.backlog?.story_points || 0,
-          prioridade: primeiraTarefa.backlog?.prioridade || 'media',
-          tipo_produto: primeiraTarefa.backlog?.tipo_produto || null,
-          sprint_nome: '',
-          sprint_data_inicio: primeiraDataInicio,
-          sprint_data_fim: ultimaDataFim,
-          sprint_status: primeiraTarefa.sprint?.status || 'planejamento',
-          subtarefas: todasSubtarefas,
+          id: backlog.id,
+          backlog_id: backlog.id,
+          status_backlog: backlog.status,
+          responsavel: backlog.responsavel || sprintAtiva?.responsavel || null,
+          created_at: backlog.created_at,
+          updated_at: backlog.updated_at,
+          titulo: backlog.titulo,
+          descricao: backlog.descricao,
+          story_points: backlog.story_points,
+          prioridade: backlog.prioridade,
+          tipo_produto: backlog.tipo_produto,
+          sprint_id: sprintAtiva?.sprint_id || null,
+          sprint_nome: sprintAtiva?.sprint?.nome || null,
+          sprint_data_inicio: sprintAtiva?.sprint?.data_inicio || null,
+          sprint_data_fim: sprintAtiva?.sprint?.data_fim || null,
+          sprint_status: sprintAtiva?.sprint?.status || null,
+          subtarefas: subtarefasDoBacklog,
         };
       });
 

@@ -1,5 +1,5 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { getStatusColor, getStatusLabel } from '@/lib/roadmapStatus';
+import { getStatusColor, getStatusLabel, calculateTaskStatus, getDataInicio, getDataFim } from '@/lib/roadmapStatus';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import type { RoadmapTarefa } from '@/hooks/useRoadmapTarefas';
@@ -16,27 +16,6 @@ export const RoadmapTable = ({ items, onRowClick }: RoadmapTableProps) => {
     return format(new Date(date), 'dd/MM/yyyy', { locale: ptBR });
   };
 
-  const getDataInicio = (item: RoadmapTarefa) => {
-    return formatDate(item.sprint_data_inicio);
-  };
-
-  const getDataFim = (item: RoadmapTarefa) => {
-    return formatDate(item.sprint_data_fim);
-  };
-
-  const getSubtarefasStatus = (item: RoadmapTarefa) => {
-    const total = item.subtarefas.length;
-    if (total === 0) return { concluidas: 0, total: 0, status: 'NAO_INICIADO' };
-    
-    const concluidas = item.subtarefas.filter(s => s.status === 'done' || s.status === 'validated').length;
-    
-    let status = 'NAO_INICIADO';
-    if (concluidas === total) status = 'DESENVOLVIDO';
-    else if (concluidas > 0) status = 'EM_DESENVOLVIMENTO';
-    
-    return { concluidas, total, status };
-  };
-
   return (
     <div className="border rounded-lg overflow-hidden">
       <Table>
@@ -45,7 +24,6 @@ export const RoadmapTable = ({ items, onRowClick }: RoadmapTableProps) => {
             <TableHead className="font-bold">Tarefa</TableHead>
             <TableHead className="font-bold">Responsável</TableHead>
             <TableHead className="font-bold">Story Points</TableHead>
-            <TableHead className="font-bold">Subtarefas</TableHead>
             <TableHead className="font-bold">Data Início</TableHead>
             <TableHead className="font-bold">Data Fim</TableHead>
             <TableHead className="font-bold">Status</TableHead>
@@ -53,11 +31,16 @@ export const RoadmapTable = ({ items, onRowClick }: RoadmapTableProps) => {
         </TableHeader>
         <TableBody>
           {items.map((item) => {
-            const subtarefasInfo = getSubtarefasStatus(item);
+            const status = calculateTaskStatus(item);
+            const dataInicio = getDataInicio(item);
+            const dataFim = getDataFim(item);
+            // Story points = quantidade de subtarefas
+            const storyPoints = item.subtarefas.length;
+            
             return (
               <TableRow
                 key={item.id}
-                className={`${getStatusColor(subtarefasInfo.status as any)} cursor-pointer hover:opacity-80`}
+                className={`${getStatusColor(status)} cursor-pointer hover:opacity-80`}
                 onClick={() => onRowClick?.(item)}
               >
                 <TableCell>
@@ -70,29 +53,19 @@ export const RoadmapTable = ({ items, onRowClick }: RoadmapTableProps) => {
                 </TableCell>
                 <TableCell>{item.responsavel || '-'}</TableCell>
                 <TableCell>
-                  <Badge variant="outline">{item.story_points}</Badge>
+                  <Badge variant="outline">{storyPoints}</Badge>
                 </TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <span className="font-medium">{subtarefasInfo.concluidas}/{subtarefasInfo.total}</span>
-                    {subtarefasInfo.total > 0 && (
-                      <div className="text-xs text-muted-foreground">
-                        ({Math.round((subtarefasInfo.concluidas / subtarefasInfo.total) * 100)}%)
-                      </div>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>{getDataInicio(item)}</TableCell>
-                <TableCell>{getDataFim(item)}</TableCell>
+                <TableCell>{formatDate(dataInicio)}</TableCell>
+                <TableCell>{formatDate(dataFim)}</TableCell>
                 <TableCell className="font-semibold">
-                  {getStatusLabel(subtarefasInfo.status as any)}
+                  {getStatusLabel(status)}
                 </TableCell>
               </TableRow>
             );
           })}
           {items.length === 0 && (
             <TableRow>
-              <TableCell colSpan={7} className="text-center text-muted-foreground">
+              <TableCell colSpan={6} className="text-center text-muted-foreground">
                 Nenhuma tarefa encontrada
               </TableCell>
             </TableRow>
