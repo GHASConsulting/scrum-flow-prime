@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { calculateTaskStatus, calculateKPIs } from '@/lib/roadmapStatus';
 
 export default function RoadmapGeral() {
   const { tarefas, loading } = useRoadmapTarefas();
@@ -26,14 +27,7 @@ export default function RoadmapGeral() {
   const filteredItems = useMemo(() => {
     return tarefas.filter(item => {
       const matchTarefa = item.titulo.toLowerCase().includes(searchTarefa.toLowerCase());
-      
-      let itemStatus = 'NAO_INICIADO';
-      if (item.subtarefas.length > 0) {
-        const concluidas = item.subtarefas.filter(s => s.status === 'done' || s.status === 'validated').length;
-        if (concluidas === item.subtarefas.length) itemStatus = 'DESENVOLVIDO';
-        else if (concluidas > 0) itemStatus = 'EM_DESENVOLVIMENTO';
-      }
-      
+      const itemStatus = calculateTaskStatus(item);
       const matchStatus = statusFilter === 'todos' || itemStatus === statusFilter;
       const matchResponsavel = responsavelFilter === 'todos' || item.responsavel === responsavelFilter;
       const matchTipo = tipoFilter === 'todos' || item.tipo_produto === tipoFilter;
@@ -46,26 +40,10 @@ export default function RoadmapGeral() {
   const ghas = useMemo(() => filteredItems.filter(i => i.tipo_produto === 'Projeto GHAS'), [filteredItems]);
   const inovemed = useMemo(() => filteredItems.filter(i => i.tipo_produto === 'Projeto Inovemed'), [filteredItems]);
 
-  const calculateKPIsForItems = (items: typeof tarefas) => {
-    const total = items.length;
-    const concluidos = items.filter(item => {
-      const concluidasCount = item.subtarefas.filter(s => s.status === 'done' || s.status === 'validated').length;
-      return item.subtarefas.length > 0 && concluidasCount === item.subtarefas.length;
-    }).length;
-    
-    return {
-      total,
-      concluidos,
-      percentualConcluido: total > 0 ? Math.round((concluidos / total) * 100) : 0,
-      tempoMedioReal: 0,
-      atrasoMedio: 0,
-    };
-  };
-
-  const kpisProdutos = calculateKPIsForItems(produtos);
-  const kpisGhas = calculateKPIsForItems(ghas);
-  const kpisInovemed = calculateKPIsForItems(inovemed);
-  const kpisGeral = calculateKPIsForItems(filteredItems);
+  const kpisProdutos = useMemo(() => calculateKPIs(produtos), [produtos]);
+  const kpisGhas = useMemo(() => calculateKPIs(ghas), [ghas]);
+  const kpisInovemed = useMemo(() => calculateKPIs(inovemed), [inovemed]);
+  const kpisGeral = useMemo(() => calculateKPIs(filteredItems), [filteredItems]);
 
   const responsaveisUnicos = useMemo(() => {
     const responsaveis = new Set<string>();
@@ -129,7 +107,7 @@ export default function RoadmapGeral() {
                 <CardTitle className="text-xl flex items-center gap-2">
                   🟩 Produtos
                   <span className="text-sm text-muted-foreground ml-4">
-                    ({kpisProdutos.total} KRs • {kpisProdutos.percentualConcluido}% concluídos)
+                    ({kpisProdutos.total} tarefas • {kpisProdutos.percentualConcluido}% entregues)
                   </span>
                 </CardTitle>
               </div>
@@ -168,7 +146,7 @@ export default function RoadmapGeral() {
                 <CardTitle className="text-xl flex items-center gap-2">
                   🟦 Projetos GHAS
                   <span className="text-sm text-muted-foreground ml-4">
-                    ({kpisGhas.total} KRs • {kpisGhas.percentualConcluido}% concluídos)
+                    ({kpisGhas.total} tarefas • {kpisGhas.percentualConcluido}% entregues)
                   </span>
                 </CardTitle>
               </div>
@@ -207,7 +185,7 @@ export default function RoadmapGeral() {
                 <CardTitle className="text-xl flex items-center gap-2">
                   🟧 Projetos Inovemed
                   <span className="text-sm text-muted-foreground ml-4">
-                    ({kpisInovemed.total} KRs • {kpisInovemed.percentualConcluido}% concluídos)
+                    ({kpisInovemed.total} tarefas • {kpisInovemed.percentualConcluido}% entregues)
                   </span>
                 </CardTitle>
               </div>

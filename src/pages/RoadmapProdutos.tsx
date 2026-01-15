@@ -5,6 +5,7 @@ import { RoadmapKPIs } from '@/components/roadmap/RoadmapKPIs';
 import { RoadmapFilters } from '@/components/roadmap/RoadmapFilters';
 import { RoadmapTable } from '@/components/roadmap/RoadmapTable';
 import { RoadmapExport } from '@/components/roadmap/RoadmapExport';
+import { calculateTaskStatus, calculateKPIs } from '@/lib/roadmapStatus';
 
 export default function RoadmapProdutos() {
   const { tarefas, loading } = useRoadmapTarefas();
@@ -21,15 +22,7 @@ export default function RoadmapProdutos() {
   const filteredItems = useMemo(() => {
     return produtos.filter(item => {
       const matchTarefa = item.titulo.toLowerCase().includes(searchTarefa.toLowerCase());
-      
-      // Calcular status baseado nas subtarefas
-      let itemStatus = 'NAO_INICIADO';
-      if (item.subtarefas.length > 0) {
-        const concluidas = item.subtarefas.filter(s => s.status === 'done' || s.status === 'validated').length;
-        if (concluidas === item.subtarefas.length) itemStatus = 'DESENVOLVIDO';
-        else if (concluidas > 0) itemStatus = 'EM_DESENVOLVIMENTO';
-      }
-      
+      const itemStatus = calculateTaskStatus(item);
       const matchStatus = statusFilter === 'todos' || itemStatus === statusFilter;
       const matchResponsavel = responsavelFilter === 'todos' || item.responsavel === responsavelFilter;
       
@@ -37,21 +30,7 @@ export default function RoadmapProdutos() {
     });
   }, [produtos, searchTarefa, statusFilter, responsavelFilter]);
 
-  const kpis = useMemo(() => {
-    const total = filteredItems.length;
-    const concluidos = filteredItems.filter(item => {
-      const concluidasCount = item.subtarefas.filter(s => s.status === 'done' || s.status === 'validated').length;
-      return item.subtarefas.length > 0 && concluidasCount === item.subtarefas.length;
-    }).length;
-    
-    return {
-      total,
-      concluidos,
-      percentualConcluido: total > 0 ? Math.round((concluidos / total) * 100) : 0,
-      tempoMedioReal: 0,
-      atrasoMedio: 0,
-    };
-  }, [filteredItems]);
+  const kpis = useMemo(() => calculateKPIs(filteredItems), [filteredItems]);
 
   const responsaveisUnicos = useMemo(() => {
     const responsaveis = new Set<string>();

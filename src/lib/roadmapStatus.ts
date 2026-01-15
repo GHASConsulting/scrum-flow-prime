@@ -1,22 +1,24 @@
-import { supabase } from '@/integrations/supabase/client';
-import type { Tables } from '@/integrations/supabase/types';
+import type { RoadmapTarefa } from '@/hooks/useRoadmapTarefas';
 
-type Subtarefa = Tables<'subtarefas'>;
-
-export type RoadmapStatus = 'NAO_INICIADO' | 'EM_DESENVOLVIMENTO' | 'TESTES' | 'DESENVOLVIDO' | 'CANCELADO';
+export type RoadmapStatus = 
+  | 'EM_SPRINT' 
+  | 'NAO_PLANEJADA' 
+  | 'EM_PLANEJAMENTO' 
+  | 'ENTREGUE' 
+  | 'EM_ATRASO';
 
 export const getStatusColor = (status: RoadmapStatus): string => {
   switch (status) {
-    case 'DESENVOLVIDO':
-      return 'bg-[#B5E3B5]';
-    case 'CANCELADO':
-      return 'bg-[#F49B9B]';
-    case 'EM_DESENVOLVIMENTO':
-      return 'bg-[#FFF4A3]';
-    case 'TESTES':
-      return 'bg-[#A5C8FF]';
-    case 'NAO_INICIADO':
-      return 'bg-[#E5C3A3]';
+    case 'ENTREGUE':
+      return 'bg-[#B5E3B5]'; // Verde claro
+    case 'EM_ATRASO':
+      return 'bg-[#F49B9B]'; // Vermelho claro
+    case 'EM_PLANEJAMENTO':
+      return 'bg-[#E5C3A3]'; // Marrom claro
+    case 'NAO_PLANEJADA':
+      return 'bg-[#E5E5E5]'; // Cinza claro
+    case 'EM_SPRINT':
+      return 'bg-[#FFF4A3]'; // Amarelo claro
     default:
       return 'bg-gray-100';
   }
@@ -24,145 +26,131 @@ export const getStatusColor = (status: RoadmapStatus): string => {
 
 export const getStatusLabel = (status: RoadmapStatus): string => {
   switch (status) {
-    case 'NAO_INICIADO':
-      return 'NÃO INICIADO';
-    case 'EM_DESENVOLVIMENTO':
-      return 'EM DESENVOLVIMENTO';
-    case 'TESTES':
-      return 'TESTES';
-    case 'DESENVOLVIDO':
-      return 'DESENVOLVIDO';
-    case 'CANCELADO':
-      return 'CANCELADO';
+    case 'EM_SPRINT':
+      return 'EM SPRINT';
+    case 'NAO_PLANEJADA':
+      return 'NÃO PLANEJADA';
+    case 'EM_PLANEJAMENTO':
+      return 'EM PLANEJAMENTO';
+    case 'ENTREGUE':
+      return 'ENTREGUE';
+    case 'EM_ATRASO':
+      return 'EM ATRASO';
     default:
       return status;
   }
 };
 
-export const calculateRoadmapStatus = async (
-  sprintTarefaIds: string[] = []
-): Promise<{
-  status: RoadmapStatus;
-  dataInicioReal: Date | null;
-  dataFimReal: Date | null;
-  percentualConcluido: number;
-}> => {
-  if (!sprintTarefaIds || sprintTarefaIds.length === 0) {
-    return {
-      status: 'NAO_INICIADO',
-      dataInicioReal: null,
-      dataFimReal: null,
-      percentualConcluido: 0,
-    };
+/**
+ * Calcula o status da tarefa baseado nas regras:
+ * - EM SPRINT: Tarefa está em uma SPRINT ATIVA
+ * - NÃO PLANEJADA: Tarefa que está fora de Sprint
+ * - EM PLANEJAMENTO: Tarefa está dentro de uma sprint, mas não está com status ATIVA
+ * - ENTREGUE: Tarefa está em uma SPRINT ATIVA e o status no backlog é FEITO ou VALIDADO
+ * - EM ATRASO: Tarefa não está com status FEITO/VALIDADO e a data da sprint ou maior data fim de subtarefa passou
+ */
+export const calculateTaskStatus = (item: RoadmapTarefa): RoadmapStatus => {
+  const hoje = new Date();
+  hoje.setHours(0, 0, 0, 0);
+  
+  const statusBacklogFinalizado = item.status_backlog === 'done' || item.status_backlog === 'validated';
+  
+  // Se não está em nenhuma sprint
+  if (!item.sprint_id) {
+    // Verificar se está em atraso (tem subtarefas com data fim passada)
+    if (item.subtarefas.length > 0) {
+      const maiorDataFim = new Date(Math.max(...item.subtarefas.map(s => new Date(s.fim).getTime())));
+      if (maiorDataFim < hoje && !statusBacklogFinalizado) {
+        return 'EM_ATRASO';
+      }
+    }
+    return 'NAO_PLANEJADA';
   }
 
-  try {
-    const { data: subtarefas, error } = await supabase
-      .from('subtarefas')
-      .select('*')
-      .in('sprint_tarefa_id', sprintTarefaIds);
-
-    if (error) throw error;
-
-    if (!subtarefas || subtarefas.length === 0) {
-      return {
-        status: 'NAO_INICIADO',
-        dataInicioReal: null,
-        dataFimReal: null,
-        percentualConcluido: 0,
-      };
+  // Se está em uma sprint ativa
+  if (item.sprint_status === 'ativo') {
+    // Se o status do backlog é FEITO ou VALIDADO
+    if (statusBacklogFinalizado) {
+      return 'ENTREGUE';
     }
-
-    const doingCount = subtarefas.filter(s => s.status === 'doing').length;
-    const doneCount = subtarefas.filter(s => s.status === 'done').length;
-    const validatedCount = subtarefas.filter(s => s.status === 'validated').length;
-    const totalCount = subtarefas.length;
-
-    let status: RoadmapStatus = 'NAO_INICIADO';
     
-    if (validatedCount === totalCount) {
-      status = 'DESENVOLVIDO';
-    } else if (doneCount + validatedCount === totalCount && validatedCount < totalCount) {
-      status = 'TESTES';
-    } else if (doingCount > 0 || doneCount > 0 || validatedCount > 0) {
-      status = 'EM_DESENVOLVIMENTO';
+    // Verificar atraso
+    const sprintDataFim = item.sprint_data_fim ? new Date(item.sprint_data_fim) : null;
+    const maiorDataFimSubtarefa = item.subtarefas.length > 0
+      ? new Date(Math.max(...item.subtarefas.map(s => new Date(s.fim).getTime())))
+      : null;
+    
+    // Em atraso se: data da sprint passou OU maior data fim de subtarefa passou
+    if (sprintDataFim && sprintDataFim < hoje) {
+      return 'EM_ATRASO';
     }
-
-    const percentualConcluido = Math.round((validatedCount / totalCount) * 100);
-
-    const sortedByInicio = [...subtarefas].sort((a, b) => 
-      new Date(a.inicio).getTime() - new Date(b.inicio).getTime()
-    );
-    const dataInicioReal = sortedByInicio.length > 0 
-      ? new Date(sortedByInicio[0].inicio) 
-      : null;
-
-    const subtarefasValidadas = subtarefas.filter(s => s.status === 'validated');
-    const sortedByFim = [...subtarefasValidadas].sort((a, b) => 
-      new Date(b.fim).getTime() - new Date(a.fim).getTime()
-    );
-    const dataFimReal = sortedByFim.length > 0 
-      ? new Date(sortedByFim[0].fim) 
-      : null;
-
-    return {
-      status,
-      dataInicioReal,
-      dataFimReal,
-      percentualConcluido,
-    };
-  } catch (error) {
-    console.error('Erro ao calcular status do roadmap:', error);
-    return {
-      status: 'NAO_INICIADO',
-      dataInicioReal: null,
-      dataFimReal: null,
-      percentualConcluido: 0,
-    };
+    if (maiorDataFimSubtarefa && maiorDataFimSubtarefa < hoje) {
+      return 'EM_ATRASO';
+    }
+    
+    return 'EM_SPRINT';
   }
+
+  // Se está em uma sprint mas não é ativa (planejamento ou concluída)
+  // Verificar atraso para sprints concluídas
+  if (item.sprint_status === 'concluido' && !statusBacklogFinalizado) {
+    const sprintDataFim = item.sprint_data_fim ? new Date(item.sprint_data_fim) : null;
+    const maiorDataFimSubtarefa = item.subtarefas.length > 0
+      ? new Date(Math.max(...item.subtarefas.map(s => new Date(s.fim).getTime())))
+      : null;
+    
+    if (sprintDataFim && sprintDataFim < hoje) {
+      return 'EM_ATRASO';
+    }
+    if (maiorDataFimSubtarefa && maiorDataFimSubtarefa < hoje) {
+      return 'EM_ATRASO';
+    }
+  }
+  
+  // Se está entregue mesmo em sprint não ativa
+  if (statusBacklogFinalizado) {
+    return 'ENTREGUE';
+  }
+
+  return 'EM_PLANEJAMENTO';
 };
 
-export const calculateKPIs = (items: any[]) => {
+/**
+ * Calcula a data de início:
+ * - Se não tem subtarefas: usa data de início da sprint
+ * - Se tem subtarefas: usa a menor data de início das subtarefas
+ */
+export const getDataInicio = (item: RoadmapTarefa): string | null => {
+  if (item.subtarefas.length > 0) {
+    const menorDataInicio = new Date(Math.min(...item.subtarefas.map(s => new Date(s.inicio).getTime())));
+    return menorDataInicio.toISOString();
+  }
+  return item.sprint_data_inicio;
+};
+
+/**
+ * Calcula a data de fim:
+ * - Se não tem subtarefas: usa data de fim da sprint
+ * - Se tem subtarefas: usa a maior data de fim das subtarefas
+ */
+export const getDataFim = (item: RoadmapTarefa): string | null => {
+  if (item.subtarefas.length > 0) {
+    const maiorDataFim = new Date(Math.max(...item.subtarefas.map(s => new Date(s.fim).getTime())));
+    return maiorDataFim.toISOString();
+  }
+  return item.sprint_data_fim;
+};
+
+export const calculateKPIs = (items: RoadmapTarefa[]) => {
   const total = items.length;
-  const concluidos = items.filter(item => item.status === 'DESENVOLVIDO').length;
+  const concluidos = items.filter(item => calculateTaskStatus(item) === 'ENTREGUE').length;
   const percentualConcluido = total > 0 ? Math.round((concluidos / total) * 100) : 0;
-
-  const itensComDatas = items.filter(
-    item => item.data_inicio_real && item.data_fim_real
-  );
-  
-  const tempoMedioReal = itensComDatas.length > 0
-    ? Math.round(
-        itensComDatas.reduce((acc, item) => {
-          const inicio = new Date(item.data_inicio_real).getTime();
-          const fim = new Date(item.data_fim_real).getTime();
-          return acc + (fim - inicio) / (1000 * 60 * 60 * 24);
-        }, 0) / itensComDatas.length
-      )
-    : 0;
-
-  const itensComAtraso = items.filter(
-    item => 
-      item.data_fim_prevista && 
-      item.data_fim_real && 
-      new Date(item.data_fim_real) > new Date(item.data_fim_prevista)
-  );
-  
-  const atrasoMedio = itensComAtraso.length > 0
-    ? Math.round(
-        itensComAtraso.reduce((acc, item) => {
-          const prevista = new Date(item.data_fim_prevista).getTime();
-          const real = new Date(item.data_fim_real).getTime();
-          return acc + (real - prevista) / (1000 * 60 * 60 * 24);
-        }, 0) / itensComAtraso.length
-      )
-    : 0;
 
   return {
     total,
     concluidos,
     percentualConcluido,
-    tempoMedioReal,
-    atrasoMedio,
+    tempoMedioReal: 0,
+    atrasoMedio: 0,
   };
 };

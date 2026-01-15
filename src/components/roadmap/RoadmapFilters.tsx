@@ -34,7 +34,7 @@ export const RoadmapFilters = ({
     <div className="flex flex-wrap gap-4 mb-6">
       <div className="flex-1 min-w-[200px]">
         <Input
-          placeholder="Buscar KR..."
+          placeholder="Buscar tarefa..."
           value={searchKR}
           onChange={(e) => onSearchKRChange(e.target.value)}
         />
@@ -46,20 +46,20 @@ export const RoadmapFilters = ({
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="todos">Todos os status</SelectItem>
-          <SelectItem value="NAO_INICIADO">Não iniciado</SelectItem>
-          <SelectItem value="EM_DESENVOLVIMENTO">Em desenvolvimento</SelectItem>
-          <SelectItem value="TESTES">Testes</SelectItem>
-          <SelectItem value="DESENVOLVIDO">Desenvolvido</SelectItem>
-          <SelectItem value="CANCELADO">Cancelado</SelectItem>
+          <SelectItem value="EM_SPRINT">Em Sprint</SelectItem>
+          <SelectItem value="NAO_PLANEJADA">Não Planejada</SelectItem>
+          <SelectItem value="EM_PLANEJAMENTO">Em Planejamento</SelectItem>
+          <SelectItem value="ENTREGUE">Entregue</SelectItem>
+          <SelectItem value="EM_ATRASO">Em Atraso</SelectItem>
         </SelectContent>
       </Select>
 
       <Select value={atorFilter} onValueChange={onAtorFilterChange}>
         <SelectTrigger className="w-[200px]">
-          <SelectValue placeholder="Ator" />
+          <SelectValue placeholder="Responsável" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="todos">Todos os atores</SelectItem>
+          <SelectItem value="todos">Todos os responsáveis</SelectItem>
           {atoresUnicos.map((ator) => (
             <SelectItem key={ator} value={ator}>
               {ator}
