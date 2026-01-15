@@ -35,6 +35,7 @@ const SprintPlanning = () => {
   const [isEditingSprint, setIsEditingSprint] = useState(false);
   const [isCreatingTask, setIsCreatingTask] = useState(false);
   const [filtroResponsavel, setFiltroResponsavel] = useState<string>('all');
+  const [filtroTipoProduto, setFiltroTipoProduto] = useState<string>('all');
   const [mostrarApenasSemSprint, setMostrarApenasSemSprint] = useState(false);
   const [editingTask, setEditingTask] = useState<BacklogItem | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -366,6 +367,10 @@ const SprintPlanning = () => {
     
     if (filtroResponsavel && filtroResponsavel !== 'all') {
       filteredBacklog = filteredBacklog.filter(b => b.responsavel === filtroResponsavel);
+    }
+
+    if (filtroTipoProduto && filtroTipoProduto !== 'all') {
+      filteredBacklog = filteredBacklog.filter(b => (b as any).tipo_produto === filtroTipoProduto);
     }
     
     // Filtrar por tarefas sem sprint
@@ -714,21 +719,38 @@ const SprintPlanning = () => {
               </div>
               
               <div className="mt-4 space-y-4">
-                <div>
-                  <label className="text-sm font-medium mb-2 block">Filtrar por Responsável</label>
-                  <Select value={filtroResponsavel} onValueChange={setFiltroResponsavel}>
-                    <SelectTrigger className="w-full sm:w-64">
-                      <SelectValue placeholder="Todos os responsáveis" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos os responsáveis</SelectItem>
-                      {Array.from(new Set(backlog.map(b => b.responsavel).filter(Boolean))).map((responsavel) => (
-                        <SelectItem key={responsavel} value={responsavel!}>
-                          {responsavel}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <label className="text-sm font-medium mb-2 block">Filtrar por Responsável</label>
+                    <Select value={filtroResponsavel} onValueChange={setFiltroResponsavel}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Todos os responsáveis" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os responsáveis</SelectItem>
+                        {Array.from(new Set(backlog.map(b => b.responsavel).filter(Boolean))).map((responsavel) => (
+                          <SelectItem key={responsavel} value={responsavel!}>
+                            {responsavel}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex-1">
+                    <label className="text-sm font-medium mb-2 block">Filtrar por Tipo de Produto</label>
+                    <Select value={filtroTipoProduto} onValueChange={setFiltroTipoProduto}>
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Todos os tipos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os tipos</SelectItem>
+                        <SelectItem value="Produto">Produto</SelectItem>
+                        <SelectItem value="Projeto GHAS">Projeto GHAS</SelectItem>
+                        <SelectItem value="Projeto Inovemed">Projeto Inovemed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
 
                 <div className="flex items-center space-x-2">
