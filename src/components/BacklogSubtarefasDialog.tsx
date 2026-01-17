@@ -17,7 +17,7 @@ interface BacklogSubtarefasDialogProps {
   onOpenChange: (open: boolean) => void;
   backlogId: string;
   backlogTitulo: string;
-  defaultResponsavel: string;
+  defaultResponsavel?: string;
   onDuplicate?: () => void;
 }
 
@@ -26,7 +26,7 @@ export const BacklogSubtarefasDialog = ({
   onOpenChange,
   backlogId,
   backlogTitulo,
-  defaultResponsavel,
+  defaultResponsavel = '',
   onDuplicate
 }: BacklogSubtarefasDialogProps) => {
   const { subtarefas, addSubtarefa, updateSubtarefa, deleteSubtarefa, getSubtarefasByBacklogId } = useSubtarefas();
