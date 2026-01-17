@@ -9,25 +9,30 @@ import { Calendar } from '@/components/ui/calendar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { useBacklog } from '@/hooks/useBacklog';
 import { useSprints } from '@/hooks/useSprints';
 import { useSprintTarefas } from '@/hooks/useSprintTarefas';
 import { useProfiles } from '@/hooks/useProfiles';
+import { useSubtarefas } from '@/hooks/useSubtarefas';
 import { format, parseISO } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { toZonedTime } from 'date-fns-tz';
-import { CalendarIcon, Plus, Check, Trash2, X, Edit } from 'lucide-react';
+import { CalendarIcon, Plus, Check, Trash2, X, Edit, Copy, ChevronDown, ChevronRight, ListTodo } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { statusLabels, formatDate } from '@/lib/formatters';
 import type { BacklogItem, Status } from '@/types/scrum';
 import type { Tables } from '@/integrations/supabase/types';
+import { DuplicateTaskDialog } from '@/components/DuplicateTaskDialog';
+import { BacklogSubtarefasDialog } from '@/components/BacklogSubtarefasDialog';
 
 const SprintPlanning = () => {
   const { backlog, addBacklogItem, updateBacklogItem, deleteBacklogItem } = useBacklog();
   const { sprints, addSprint, updateSprint, deleteSprint } = useSprints();
   const { sprintTarefas, addSprintTarefa: addTarefaToSprint, deleteSprintTarefa } = useSprintTarefas();
   const { profiles } = useProfiles();
+  const { subtarefas, getSubtarefasByBacklogId } = useSubtarefas();
   
   const [selectedSprint, setSelectedSprint] = useState<string>('');
   const [isCreatingSprint, setIsCreatingSprint] = useState(false);
@@ -39,6 +44,13 @@ const SprintPlanning = () => {
   const [mostrarApenasSemSprint, setMostrarApenasSemSprint] = useState(false);
   const [editingTask, setEditingTask] = useState<BacklogItem | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  
+  // Estados para duplicar e subtarefas
+  const [duplicateTask, setDuplicateTask] = useState<Tables<'backlog'> | null>(null);
+  const [isDuplicateDialogOpen, setIsDuplicateDialogOpen] = useState(false);
+  const [subtarefasTask, setSubtarefasTask] = useState<Tables<'backlog'> | null>(null);
+  const [isSubtarefasDialogOpen, setIsSubtarefasDialogOpen] = useState(false);
+  const [expandedTasks, setExpandedTasks] = useState<Set<string>>(new Set());
   
   const [newTask, setNewTask] = useState<{
     titulo: string;
@@ -885,45 +897,115 @@ const SprintPlanning = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
                   {availableBacklog.map(item => {
                     const sprintDaTarefa = getSprintDaTarefa(item.id);
+                    const subtarefasDaTarefa = getSubtarefasByBacklogId(item.id);
+                    const isExpanded = expandedTasks.has(item.id);
+                    
                     return (
                       <div 
                         key={item.id} 
-                        className="p-4 border rounded-lg space-y-3 cursor-pointer hover:border-primary transition-colors"
-                        onClick={() => handleEditTask(item)}
+                        className="p-4 border rounded-lg space-y-3"
                       >
-                        <div>
-                          <h4 className="font-semibold text-sm">{item.titulo}</h4>
-                          <p className="text-xs text-muted-foreground mt-1">{item.descricao}</p>
-                        </div>
-                        
-                        <div className="flex gap-2 flex-wrap">
-                          <Badge variant="outline" className="text-xs">SP: {item.story_points}</Badge>
-                          {(item as any).tipo_produto && (
-                            <Badge variant="default" className="text-xs">
-                              {(item as any).tipo_produto}
-                            </Badge>
-                          )}
-                          {sprintDaTarefa ? (
-                            <Badge variant="secondary" className="text-xs">
-                              Sprint: {sprintDaTarefa.nome}
-                            </Badge>
-                          ) : (
-                            <Badge variant="outline" className="text-xs">Fora do Sprint</Badge>
-                          )}
-                        </div>
+                        <Collapsible open={isExpanded} onOpenChange={(open) => {
+                          const newExpanded = new Set(expandedTasks);
+                          if (open) {
+                            newExpanded.add(item.id);
+                          } else {
+                            newExpanded.delete(item.id);
+                          }
+                          setExpandedTasks(newExpanded);
+                        }}>
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex-1 cursor-pointer" onClick={() => handleEditTask(item)}>
+                              <h4 className="font-semibold text-sm hover:text-primary transition-colors">{item.titulo}</h4>
+                              <p className="text-xs text-muted-foreground mt-1">{item.descricao}</p>
+                            </div>
+                            {subtarefasDaTarefa.length > 0 && (
+                              <CollapsibleTrigger asChild>
+                                <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                                  {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                                </Button>
+                              </CollapsibleTrigger>
+                            )}
+                          </div>
+                          
+                          <div className="flex gap-2 flex-wrap mt-2">
+                            <Badge variant="outline" className="text-xs">SP: {item.story_points}</Badge>
+                            {(item as any).tipo_produto && (
+                              <Badge variant="default" className="text-xs">
+                                {(item as any).tipo_produto}
+                              </Badge>
+                            )}
+                            {sprintDaTarefa ? (
+                              <Badge variant="secondary" className="text-xs">
+                                Sprint: {sprintDaTarefa.nome}
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-xs">Fora do Sprint</Badge>
+                            )}
+                            {subtarefasDaTarefa.length > 0 && (
+                              <Badge variant="secondary" className="text-xs">
+                                <ListTodo className="h-3 w-3 mr-1" />
+                                {subtarefasDaTarefa.length} subtarefa(s)
+                              </Badge>
+                            )}
+                          </div>
 
-                        <p className="text-xs text-muted-foreground">
-                          Responsável: {item.responsavel}
-                        </p>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Responsável: {item.responsavel}
+                          </p>
 
-                        <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                          {/* Subtarefas expandidas */}
+                          <CollapsibleContent className="mt-3">
+                            <div className="border-t pt-3 space-y-2">
+                              <p className="text-xs font-medium text-muted-foreground">Subtarefas:</p>
+                              {subtarefasDaTarefa.map(sub => (
+                                <div key={sub.id} className="flex items-center gap-2 text-xs p-2 bg-muted/50 rounded">
+                                  <Badge 
+                                    variant={sub.status === 'done' ? 'default' : sub.status === 'doing' ? 'secondary' : 'outline'} 
+                                    className="text-[10px] px-1.5"
+                                  >
+                                    {sub.status === 'done' ? 'Concluída' : sub.status === 'doing' ? 'Em progresso' : 'Pendente'}
+                                  </Badge>
+                                  <span className="flex-1 truncate">{sub.titulo}</span>
+                                  {sub.responsavel && (
+                                    <span className="text-muted-foreground">{sub.responsavel}</span>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+
+                        <div className="flex gap-2 flex-wrap pt-2 border-t">
                           <Button 
                             onClick={() => handleAddToSprint(item.id)} 
                             size="sm" 
                             className="flex-1"
                           >
                             <Plus className="h-3 w-3 mr-1" />
-                            Adicionar à Sprint
+                            Sprint
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setSubtarefasTask(item);
+                              setIsSubtarefasDialogOpen(true);
+                            }}
+                            size="sm"
+                            variant="outline"
+                            title="Gerenciar Subtarefas"
+                          >
+                            <ListTodo className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            onClick={() => {
+                              setDuplicateTask(item);
+                              setIsDuplicateDialogOpen(true);
+                            }}
+                            size="sm"
+                            variant="outline"
+                            title="Duplicar Tarefa"
+                          >
+                            <Copy className="h-4 w-4" />
                           </Button>
                           <Button
                             onClick={() => {
@@ -1066,6 +1148,35 @@ const SprintPlanning = () => {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Dialog de Duplicar Tarefa */}
+      {duplicateTask && (
+        <DuplicateTaskDialog
+          open={isDuplicateDialogOpen}
+          onOpenChange={(open) => {
+            setIsDuplicateDialogOpen(open);
+            if (!open) setDuplicateTask(null);
+          }}
+          task={duplicateTask}
+          onSuccess={() => {
+            setIsDuplicateDialogOpen(false);
+            setDuplicateTask(null);
+          }}
+        />
+      )}
+
+      {/* Dialog de Subtarefas */}
+      {subtarefasTask && (
+        <BacklogSubtarefasDialog
+          open={isSubtarefasDialogOpen}
+          onOpenChange={(open) => {
+            setIsSubtarefasDialogOpen(open);
+            if (!open) setSubtarefasTask(null);
+          }}
+          backlogId={subtarefasTask.id}
+          backlogTitulo={subtarefasTask.titulo}
+        />
+      )}
     </Layout>
   );
 };
