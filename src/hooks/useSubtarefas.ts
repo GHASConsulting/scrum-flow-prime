@@ -77,9 +77,15 @@ export const useSubtarefas = () => {
       if (error) throw error;
       setSubtarefas(prev => prev.filter(s => s.id !== id));
       toast.success('Subtarefa removida');
-    } catch (error) {
+    } catch (error: any) {
       console.error('Erro ao remover subtarefa:', error);
-      toast.error('Erro ao remover subtarefa');
+      
+      // Verificar se é erro de sprint encerrada
+      if (error?.code === 'P0001' && error?.message?.includes('sprint')) {
+        toast.error('Não é possível excluir subtarefas de sprints encerradas');
+      } else {
+        toast.error('Erro ao remover subtarefa');
+      }
       throw error;
     }
   };

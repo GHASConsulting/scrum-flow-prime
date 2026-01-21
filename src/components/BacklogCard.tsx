@@ -49,6 +49,9 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
   // Obter a sprint associada
   const sprint = sprintTarefa ? sprints.find(s => s.id === sprintTarefa.sprint_id) : null;
   
+  // Verificar se a sprint está encerrada
+  const isSprintClosed = sprint?.status === 'concluido';
+  
   // Filtrar subtarefas desta tarefa pelo backlog_id (não mais por sprint_tarefa_id)
   const subtarefasDaTarefaRaw = subtarefas.filter(sub => sub.backlog_id === item.id);
 
@@ -269,13 +272,16 @@ export const BacklogCard = ({ item, onStatusChange, onUpdate }: BacklogCardProps
                             <span>Fim: {format(new Date(sub.fim), 'dd/MM/yyyy', { locale: ptBR })}</span>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteSubtarefa(sub.id)}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
+                        {!isSprintClosed && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteSubtarefa(sub.id)}
+                            title="Excluir subtarefa"
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>
