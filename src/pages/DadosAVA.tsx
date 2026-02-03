@@ -77,9 +77,24 @@ const DadosAVA = () => {
       
       // Filtro de data (usa appliedDateRange ao invés de dateRange)
       if (appliedDateRange?.from) {
-        // Parse da data do evento (formato: 'YYYY-MM-DD HH:MM:SS')
-        const eventoDateStr = evento.dt_registro.substring(0, 10); // Pega apenas YYYY-MM-DD
-        const eventoDate = parse(eventoDateStr, 'yyyy-MM-dd', new Date());
+        // Parse da data do evento - tenta diferentes formatos
+        let eventoDate: Date | null = null;
+        const dtRegistro = evento.dt_registro;
+        
+        // Tenta formato DD-MM-YYYY ou DD.MM.YYYY
+        if (dtRegistro.match(/^\d{2}[-./]\d{2}[-./]\d{4}/)) {
+          const cleanDate = dtRegistro.substring(0, 10).replace(/[./]/g, '-');
+          eventoDate = parse(cleanDate, 'dd-MM-yyyy', new Date());
+        }
+        // Tenta formato YYYY-MM-DD
+        else if (dtRegistro.match(/^\d{4}-\d{2}-\d{2}/)) {
+          const eventoDateStr = dtRegistro.substring(0, 10);
+          eventoDate = parse(eventoDateStr, 'yyyy-MM-dd', new Date());
+        }
+        
+        if (!eventoDate || isNaN(eventoDate.getTime())) {
+          return false;
+        }
         
         const fromDate = startOfDay(appliedDateRange.from);
         const toDate = appliedDateRange.to ? endOfDay(appliedDateRange.to) : endOfDay(appliedDateRange.from);
