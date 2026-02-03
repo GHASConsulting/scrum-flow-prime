@@ -3,7 +3,7 @@ import { Layout } from "@/components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Trash2, Activity, CheckCircle, XCircle, Clock, Info, Filter, X } from "lucide-react";
+import { Trash2, Activity, CheckCircle, XCircle, Clock, Info, Filter, X, Search } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -30,6 +30,7 @@ const DadosAVA = () => {
   const [statusFilter, setStatusFilter] = useState<string | null>(null);
   const [clienteFilter, setClienteFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<DateRange | undefined>();
+  const [appliedDateRange, setAppliedDateRange] = useState<DateRange | undefined>();
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -74,14 +75,14 @@ const DadosAVA = () => {
       // Filtro de cliente
       if (clienteFilter !== "all" && evento.nm_cliente !== clienteFilter) return false;
       
-      // Filtro de data
-      if (dateRange?.from) {
+      // Filtro de data (usa appliedDateRange ao invés de dateRange)
+      if (appliedDateRange?.from) {
         // Parse da data do evento (formato: 'YYYY-MM-DD HH:MM:SS')
         const eventoDateStr = evento.dt_registro.substring(0, 10); // Pega apenas YYYY-MM-DD
         const eventoDate = parse(eventoDateStr, 'yyyy-MM-dd', new Date());
         
-        const fromDate = startOfDay(dateRange.from);
-        const toDate = dateRange.to ? endOfDay(dateRange.to) : endOfDay(dateRange.from);
+        const fromDate = startOfDay(appliedDateRange.from);
+        const toDate = appliedDateRange.to ? endOfDay(appliedDateRange.to) : endOfDay(appliedDateRange.from);
         
         if (!isWithinInterval(eventoDate, { start: fromDate, end: toDate })) {
           return false;
@@ -90,7 +91,7 @@ const DadosAVA = () => {
       
       return true;
     });
-  }, [eventos, statusFilter, clienteFilter, dateRange]);
+  }, [eventos, statusFilter, clienteFilter, appliedDateRange]);
 
   // Estatísticas baseadas nos eventos filtrados
   const stats = useMemo(() => {
@@ -118,13 +119,21 @@ const DadosAVA = () => {
     };
   }, [filteredEventos]);
 
+  const applyDateFilter = () => {
+    setAppliedDateRange(dateRange);
+  };
+
   const clearFilters = () => {
     setStatusFilter(null);
     setClienteFilter("all");
     setDateRange(undefined);
+    setAppliedDateRange(undefined);
   };
 
-  const hasActiveFilters = statusFilter || clienteFilter !== "all" || dateRange?.from;
+  const hasActiveFilters = statusFilter || clienteFilter !== "all" || appliedDateRange?.from;
+  const hasUnappliedDateRange = dateRange?.from && (!appliedDateRange?.from || 
+    dateRange.from.getTime() !== appliedDateRange.from?.getTime() || 
+    dateRange.to?.getTime() !== appliedDateRange.to?.getTime());
 
   return (
     <Layout>
@@ -198,6 +207,20 @@ const DadosAVA = () => {
                     />
                   </PopoverContent>
                 </Popover>
+              </div>
+
+              {/* Botão Filtrar */}
+              <div className="flex items-end">
+                <Button
+                  onClick={applyDateFilter}
+                  disabled={!dateRange?.from}
+                  className={cn(
+                    hasUnappliedDateRange && "animate-pulse"
+                  )}
+                >
+                  <Search className="h-4 w-4 mr-2" />
+                  Filtrar
+                </Button>
               </div>
 
               {/* Botão Limpar */}
